@@ -50,3 +50,26 @@ The frontend is designed for expert phone use first:
 - call queue and completion progress
 
 For Vercel, set the project root to `frontend/` and add `VITE_API_URL` pointing at the deployed backend.
+
+## Railway Backend Deployment
+
+This repo includes a root `Dockerfile` for Railway. It builds only the Python backend and ignores local/generated artifacts through `.dockerignore`.
+
+1. In Railway, create a new project from the GitHub repo `rohithputha/expert-interface`.
+2. Add a PostgreSQL service in the same Railway project.
+3. On the backend service, set variables:
+   - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+   - `CORS_ORIGIN=https://your-vercel-domain.vercel.app,http://localhost:5173`
+4. Deploy the backend service.
+5. In backend service settings, generate a Railway public domain.
+6. Test `https://your-railway-domain/health`.
+7. In Vercel, set `VITE_API_URL=https://your-railway-domain` and redeploy the frontend.
+
+To import real calls into Railway Postgres, do not commit the workbook or generated call JSON. Use the Railway Postgres external connection string, then run locally:
+
+```bash
+cd backend
+DATABASE_URL="postgresql://..." python3 scripts/import_calls.py "/path/to/Rubric Sample Calls.xlsx"
+```
+
+The importer writes directly into the configured database and keeps transcript/audio data out of GitHub.

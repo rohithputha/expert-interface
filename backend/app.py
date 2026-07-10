@@ -11,6 +11,7 @@ from rubric import RUBRIC
 
 PORT = int(os.environ.get("PORT", "8787"))
 CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
+ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ORIGIN.split(",") if origin.strip()]
 
 
 class ApiHandler(BaseHTTPRequestHandler):
@@ -87,9 +88,18 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def _headers(self) -> None:
-        self.send_header("access-control-allow-origin", CORS_ORIGIN)
+        self.send_header("access-control-allow-origin", self._cors_origin())
+        self.send_header("vary", "Origin")
         self.send_header("access-control-allow-methods", "GET,POST,OPTIONS")
         self.send_header("access-control-allow-headers", "content-type")
+
+    def _cors_origin(self) -> str:
+        request_origin = self.headers.get("origin")
+        if "*" in ALLOWED_ORIGINS:
+            return "*"
+        if request_origin and request_origin in ALLOWED_ORIGINS:
+            return request_origin
+        return ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else "*"
 
     def log_message(self, fmt: str, *args: object) -> None:
         print("%s - %s" % (self.address_string(), fmt % args))
