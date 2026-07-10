@@ -1,4 +1,4 @@
-export type RatingValue = "strong" | "adequate" | "weak" | "fail" | "na";
+export type RatingValue = "strong" | "adequate" | "weak" | "fail";
 
 export type TranscriptTurn = {
   id: string;

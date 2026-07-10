@@ -55,6 +55,13 @@ function App() {
     () => calls.filter((call) => call.reviewStatus !== "submitted" && !completedIds.has(call.id)),
     [calls, completedIds]
   );
+  const completedSubcriterionCount = useMemo(
+    () =>
+      rubric
+        .flatMap((criterion) => criterion.subcriteria)
+        .filter((subcriterion) => ratings[subcriterion.id] && evidenceBySubcriterion[subcriterion.id]?.trim()).length,
+    [evidenceBySubcriterion, ratings, rubric]
+  );
   const filteredCalls = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return ungradedCalls;
@@ -63,6 +70,24 @@ function App() {
       return haystack.includes(needle);
     });
   }, [query, ungradedCalls]);
+
+  function activeSubcriterionReady() {
+    if (!activeSubcriterion) return false;
+    return Boolean(ratings[activeSubcriterion.id] && evidenceBySubcriterion[activeSubcriterion.id]?.trim());
+  }
+
+  function firstIncompleteSubcriterion() {
+    for (let nextCriterionIndex = 0; nextCriterionIndex < rubric.length; nextCriterionIndex += 1) {
+      const criterion = rubric[nextCriterionIndex];
+      for (let nextSubIndex = 0; nextSubIndex < criterion.subcriteria.length; nextSubIndex += 1) {
+        const subcriterion = criterion.subcriteria[nextSubIndex];
+        if (!ratings[subcriterion.id] || !evidenceBySubcriterion[subcriterion.id]?.trim()) {
+          return { criterionIndex: nextCriterionIndex, subIndex: nextSubIndex, title: subcriterion.title };
+        }
+      }
+    }
+    return null;
+  }
 
   async function selectCall(callId: string) {
     const next = await loadCall(callId);
@@ -76,8 +101,8 @@ function App() {
   }
 
   function stepRubric(direction: 1 | -1) {
-    if (direction === 1 && activeSubcriterion && !ratings[activeSubcriterion.id]) {
-      setNotice("Select a rating before moving to the next question.");
+    if (direction === 1 && activeSubcriterion && !activeSubcriterionReady()) {
+      setNotice("Select a rating and add evidence before moving to the next question.");
       return;
     }
     let nextCriterion = criterionIndex;
@@ -100,12 +125,11 @@ function App() {
   async function submit(status: "draft" | "submitted") {
     if (!activeCall || !activeSubcriterion) return;
     if (status === "submitted") {
-      if (!ratings[activeSubcriterion.id]) {
-        setNotice("Select a rating before submitting.");
-        return;
-      }
-      if (Object.keys(ratings).length < totalSubcriteria) {
-        setNotice("Rate every question before submitting the call.");
+      const firstIncomplete = firstIncompleteSubcriterion();
+      if (firstIncomplete) {
+        setCriterionIndex(firstIncomplete.criterionIndex);
+        setSubIndex(firstIncomplete.subIndex);
+        setNotice(`Complete rating and evidence for "${firstIncomplete.title}" before submitting.`);
         return;
       }
     }
@@ -219,7 +243,7 @@ function App() {
         <section className="rating-card">
           <div className="criterion-topline">
             <span>
-              Criterion {criterionIndex + 1} of {rubric.length}
+              Criterion {criterionIndex + 1} of {rubric.length} · {completedSubcriterionCount}/{totalSubcriteria} done
             </span>
             <div className="dots" aria-hidden="true">
               {rubric.map((item) => (
