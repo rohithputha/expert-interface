@@ -9,11 +9,11 @@ import {
   ClipboardCheck,
   Headphones,
   ListChecks,
-  Pause,
-  Play,
+  Menu,
   Save,
   Search,
   ShieldCheck,
+  X,
   Wrench
 } from "lucide-react";
 import { loadCall, loadInitialData, saveRating } from "./api";
@@ -31,9 +31,10 @@ function App() {
   const [mode, setMode] = useState<ViewMode>("conversation");
   const [ratings, setRatings] = useState<Record<string, RatingValue>>({});
   const [evidence, setEvidence] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     loadInitialData().then((data) => {
@@ -50,14 +51,18 @@ function App() {
     rubric.slice(0, criterionIndex).reduce((sum, item) => sum + item.subcriteria.length, 0) + subIndex + 1;
   const activePosition = Math.max(0, calls.findIndex((call) => call.id === activeCall?.id));
   const progress = totalSubcriteria ? Math.round((Object.keys(ratings).length / totalSubcriteria) * 100) : 0;
+  const ungradedCalls = useMemo(
+    () => calls.filter((call) => call.reviewStatus !== "submitted" && !completedIds.has(call.id)),
+    [calls, completedIds]
+  );
   const filteredCalls = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return calls;
-    return calls.filter((call) => {
-      const haystack = `${call.id} ${call.expectedRating} ${call.reasoning} ${call.summary.issueTags.join(" ")}`.toLowerCase();
+    if (!needle) return ungradedCalls;
+    return ungradedCalls.filter((call) => {
+      const haystack = `${call.id} ${call.summary.turnCount} ${call.summary.toolCount}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [calls, query]);
+  }, [query, ungradedCalls]);
 
   async function selectCall(callId: string) {
     const next = await loadCall(callId);
@@ -67,6 +72,7 @@ function App() {
     setRatings({});
     setEvidence("");
     setNotice("");
+    setQueueOpen(false);
   }
 
   function stepRubric(direction: 1 | -1) {
@@ -98,7 +104,23 @@ function App() {
       evidence,
       status
     });
-    setNotice(status === "draft" ? "Draft saved on this device." : "Rating submitted.");
+    if (status === "submitted") {
+      const nextCompleted = new Set(completedIds);
+      nextCompleted.add(activeCall.id);
+      setCompletedIds(nextCompleted);
+      setCalls((current) =>
+        current.map((call) => (call.id === activeCall.id ? { ...call, reviewStatus: "submitted" } : call))
+      );
+      const nextCall = ungradedCalls.find((call) => call.id !== activeCall.id);
+      if (nextCall) {
+        await selectCall(nextCall.id);
+        setNotice("Rating submitted. Moved to the next ungraded call.");
+      } else {
+        setNotice("Rating submitted. Queue complete.");
+      }
+      return;
+    }
+    setNotice("Draft saved on this device.");
   }
 
   if (!activeCall || !activeCriterion || !activeSubcriterion) {
@@ -107,29 +129,40 @@ function App() {
 
   return (
     <main className="app-shell">
-      <aside className="queue-panel" aria-label="Call queue">
+      <button className="queue-toggle" onClick={() => setQueueOpen(true)} aria-label="Open ungraded calls queue">
+        <Menu size={18} />
+        <span>{ungradedCalls.length}</span>
+      </button>
+      {queueOpen ? <button className="queue-backdrop" onClick={() => setQueueOpen(false)} aria-label="Close queue" /> : null}
+
+      <aside className={`queue-panel ${queueOpen ? "is-open" : ""}`} aria-label="Ungraded calls queue">
         <div className="queue-header">
           <div>
-            <p className="eyebrow">Review queue</p>
-            <h1>Call ratings</h1>
+            <p className="eyebrow">Ungraded queue</p>
+            <h1>Calls to rate</h1>
           </div>
-          <div className="queue-count">{calls.length}</div>
+          <button className="queue-close" onClick={() => setQueueOpen(false)} aria-label="Close queue">
+            <X size={19} />
+          </button>
+          <div className="queue-count">{ungradedCalls.length}</div>
         </div>
         <label className="search-box">
           <Search size={16} aria-hidden="true" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search calls" />
         </label>
         <div className="call-list">
+          {!filteredCalls.length ? <p className="empty-queue">No ungraded calls left.</p> : null}
           {filteredCalls.map((call) => (
             <button
               className={`call-row ${call.id === activeCall.id ? "is-active" : ""}`}
               key={call.id}
               onClick={() => selectCall(call.id)}
             >
-              <span className={`rating-pill ${call.expectedRating.toLowerCase()}`}>{call.expectedRating}</span>
               <span className="call-row-main">
                 <strong>{shortId(call.id)}</strong>
-                <span>{call.summary.issueTags.join(" / ") || "general review"}</span>
+                <span>
+                  {call.summary.turnCount} turns / {call.summary.toolCount} tools
+                </span>
               </span>
               <span>{call.summary.durationLabel}</span>
             </button>
@@ -147,9 +180,6 @@ function App() {
             <span>{progress}% scored</span>
           </div>
           <div className="audio-row">
-            <button className="play-button" onClick={() => setIsPlaying((value) => !value)} aria-label="Toggle playback">
-              {isPlaying ? <Pause size={28} /> : <Play size={28} />}
-            </button>
             <audio src={activeCall.recordingUrl} controls preload="metadata" />
           </div>
           <div className="skip-row">
@@ -245,28 +275,6 @@ function App() {
           </div>
         </section>
       </section>
-
-      <aside className="context-panel" aria-label="Call context">
-        <p className="eyebrow">Known label</p>
-        <div className={`large-badge ${activeCall.expectedRating.toLowerCase()}`}>{activeCall.expectedRating}</div>
-        <h2>Why this sample matters</h2>
-        <p>{activeCall.reasoning}</p>
-        <div className="metric-grid">
-          <span>
-            <strong>{activeCall.summary.turnCount}</strong>
-            turns
-          </span>
-          <span>
-            <strong>{activeCall.summary.toolCount}</strong>
-            tools
-          </span>
-        </div>
-        <div className="tag-stack">
-          {activeCall.summary.issueTags.map((tag) => (
-            <span key={tag}>{tag}</span>
-          ))}
-        </div>
-      </aside>
     </main>
   );
 }
