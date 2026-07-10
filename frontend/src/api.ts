@@ -8,7 +8,7 @@ type RatingPayload = {
   call_id: string;
   ratings: Record<string, string>;
   evidence: string;
-  status: "draft" | "submitted";
+  status: "submitted";
 };
 
 export async function loadInitialData(): Promise<{

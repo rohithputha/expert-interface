@@ -10,7 +10,6 @@ import {
   Headphones,
   ListChecks,
   Menu,
-  Save,
   Search,
   ShieldCheck,
   X,
@@ -122,16 +121,14 @@ function App() {
     }
   }
 
-  async function submit(status: "draft" | "submitted") {
+  async function submit(status: "submitted") {
     if (!activeCall || !activeSubcriterion) return;
-    if (status === "submitted") {
-      const firstIncomplete = firstIncompleteSubcriterion();
-      if (firstIncomplete) {
-        setCriterionIndex(firstIncomplete.criterionIndex);
-        setSubIndex(firstIncomplete.subIndex);
-        setNotice(`Complete rating and evidence for "${firstIncomplete.title}" before submitting.`);
-        return;
-      }
+    const firstIncomplete = firstIncompleteSubcriterion();
+    if (firstIncomplete) {
+      setCriterionIndex(firstIncomplete.criterionIndex);
+      setSubIndex(firstIncomplete.subIndex);
+      setNotice(`Complete rating and evidence for "${firstIncomplete.title}" before submitting.`);
+      return;
     }
     await saveRating({
       call_id: activeCall.id,
@@ -139,23 +136,19 @@ function App() {
       evidence: JSON.stringify(evidenceBySubcriterion),
       status
     });
-    if (status === "submitted") {
-      const nextCompleted = new Set(completedIds);
-      nextCompleted.add(activeCall.id);
-      setCompletedIds(nextCompleted);
-      setCalls((current) =>
-        current.map((call) => (call.id === activeCall.id ? { ...call, reviewStatus: "submitted" } : call))
-      );
-      const nextCall = ungradedCalls.find((call) => call.id !== activeCall.id);
-      if (nextCall) {
-        await selectCall(nextCall.id);
-        setNotice("Rating submitted. Moved to the next ungraded call.");
-      } else {
-        setNotice("Rating submitted. Queue complete.");
-      }
-      return;
+    const nextCompleted = new Set(completedIds);
+    nextCompleted.add(activeCall.id);
+    setCompletedIds(nextCompleted);
+    setCalls((current) =>
+      current.map((call) => (call.id === activeCall.id ? { ...call, reviewStatus: "submitted" } : call))
+    );
+    const nextCall = ungradedCalls.find((call) => call.id !== activeCall.id);
+    if (nextCall) {
+      await selectCall(nextCall.id);
+      setNotice("Rating submitted. Moved to the next ungraded call.");
+    } else {
+      setNotice("Rating submitted. Queue complete.");
     }
-    setNotice("Draft saved on this device.");
   }
 
   if (!activeCall || !activeCriterion || !activeSubcriterion) {
@@ -309,9 +302,6 @@ function App() {
           <div className="action-bar">
             <button className="secondary-action" onClick={() => stepRubric(-1)} disabled={flatIndex === 1}>
               <ArrowLeft size={18} /> Back
-            </button>
-            <button className="secondary-action save-action" onClick={() => submit("draft")}>
-              <Save size={18} /> Draft
             </button>
             {flatIndex === totalSubcriteria ? (
               <button className="primary-action" onClick={() => submit("submitted")}>
