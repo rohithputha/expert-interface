@@ -1,0 +1,86 @@
+[
+  {
+    "id": "demo_call_001",
+    "expectedRating": "BAD",
+    "reasoning": "Synthetic demo: the agent committed a schedule change before receiving explicit confirmation, then had to escalate after the caller corrected the date.",
+    "recordingUrl": "",
+    "summary": {
+      "index": 1,
+      "turnCount": 6,
+      "toolCount": 2,
+      "toolNames": ["validate_reschedule_commit", "reschedule_appointment_request"],
+      "durationLabel": "0:48",
+      "issueTags": ["confirmation", "reschedule", "tooling"]
+    },
+    "reviewStatus": "unreviewed",
+    "reviewedAt": null,
+    "transcript": [
+      {
+        "id": "turn_1",
+        "speaker": "agent",
+        "text": "I can help you reschedule that appointment. What date works best?",
+        "timestamp": "0:00"
+      },
+      {
+        "id": "turn_2",
+        "speaker": "user",
+        "text": "Maybe Thursday morning, but let me check one thing.",
+        "timestamp": "0:08"
+      },
+      {
+        "id": "turn_3",
+        "speaker": "agent",
+        "text": "You are now rescheduled for Thursday at 8:45 AM.",
+        "timestamp": "0:16"
+      },
+      {
+        "id": "turn_4",
+        "speaker": "user",
+        "text": "Wait, I did not confirm that. I need Friday instead.",
+        "timestamp": "0:24"
+      },
+      {
+        "id": "turn_5",
+        "speaker": "agent",
+        "text": "I understand. Let me get a team member to help correct that.",
+        "timestamp": "0:32"
+      },
+      {
+        "id": "turn_6",
+        "speaker": "user",
+        "text": "Okay.",
+        "timestamp": "0:40"
+      }
+    ],
+    "toolEvents": [
+      {
+        "id": "tool_1",
+        "name": "validate_reschedule_commit",
+        "args": {
+          "current_visit_type": "Follow-up",
+          "new_slot_time": "2026-07-30T08:45:00"
+        },
+        "result": {
+          "outcome": "ok",
+          "next_action": "ask_confirm",
+          "patient_facing": {
+            "content": "Should I go ahead and reschedule?"
+          }
+        },
+        "summary": "validate_reschedule_commit: next_action ask_confirm"
+      },
+      {
+        "id": "tool_2",
+        "name": "reschedule_appointment_request",
+        "args": {
+          "action": "RESCHEDULE"
+        },
+        "result": {
+          "status": "success"
+        },
+        "summary": "reschedule_appointment_request: status success"
+      }
+    ],
+    "ratingsHistory": []
+  }
+]
