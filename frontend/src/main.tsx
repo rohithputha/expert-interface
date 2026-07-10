@@ -30,7 +30,7 @@ function App() {
   const [subIndex, setSubIndex] = useState(0);
   const [mode, setMode] = useState<ViewMode>("conversation");
   const [ratings, setRatings] = useState<Record<string, RatingValue>>({});
-  const [evidence, setEvidence] = useState("");
+  const [evidenceBySubcriterion, setEvidenceBySubcriterion] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
   const [queueOpen, setQueueOpen] = useState(false);
@@ -70,12 +70,16 @@ function App() {
     setCriterionIndex(0);
     setSubIndex(0);
     setRatings({});
-    setEvidence("");
+    setEvidenceBySubcriterion({});
     setNotice("");
     setQueueOpen(false);
   }
 
   function stepRubric(direction: 1 | -1) {
+    if (direction === 1 && activeSubcriterion && !ratings[activeSubcriterion.id]) {
+      setNotice("Select a rating before moving to the next question.");
+      return;
+    }
     let nextCriterion = criterionIndex;
     let nextSub = subIndex + direction;
     if (nextSub >= (rubric[nextCriterion]?.subcriteria.length ?? 0)) {
@@ -89,19 +93,26 @@ function App() {
     if (nextCriterion >= 0 && nextCriterion < rubric.length) {
       setCriterionIndex(nextCriterion);
       setSubIndex(nextSub);
+      setNotice("");
     }
   }
 
   async function submit(status: "draft" | "submitted") {
     if (!activeCall || !activeSubcriterion) return;
-    if (status === "submitted" && (!ratings[activeSubcriterion.id] || !evidence.trim())) {
-      setNotice("Select a rating and add evidence before submitting.");
-      return;
+    if (status === "submitted") {
+      if (!ratings[activeSubcriterion.id]) {
+        setNotice("Select a rating before submitting.");
+        return;
+      }
+      if (Object.keys(ratings).length < totalSubcriteria) {
+        setNotice("Rate every question before submitting the call.");
+        return;
+      }
     }
     await saveRating({
       call_id: activeCall.id,
       ratings,
-      evidence,
+      evidence: JSON.stringify(evidenceBySubcriterion),
       status
     });
     if (status === "submitted") {
@@ -218,7 +229,10 @@ function App() {
           </div>
           <div className="criterion-title">
             <ShieldCheck size={19} aria-hidden="true" />
-            <h2>{activeCriterion.title}</h2>
+            <div>
+              <h2>{activeCriterion.title}</h2>
+              <p>{activeCriterion.description}</p>
+            </div>
           </div>
           <div className="subcriterion-heading">
             <h3>{activeSubcriterion.title}</h3>
@@ -239,10 +253,13 @@ function App() {
                 />
                 <span className="radio-dot" aria-hidden="true" />
                 <span>
-                  <strong>
-                    {option.label}
-                    {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
-                  </strong>
+                  <span className="option-head">
+                    <strong>
+                      {option.label}
+                      {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
+                    </strong>
+                    <em>{option.points} pts</em>
+                  </span>
                   <small>{option.description}</small>
                 </span>
               </label>
@@ -251,7 +268,16 @@ function App() {
 
           <label className="notes-label">
             Evidence / notes *
-            <textarea value={evidence} onChange={(event) => setEvidence(event.target.value)} rows={4} />
+            <textarea
+              value={evidenceBySubcriterion[activeSubcriterion.id] ?? ""}
+              onChange={(event) =>
+                setEvidenceBySubcriterion((current) => ({
+                  ...current,
+                  [activeSubcriterion.id]: event.target.value
+                }))
+              }
+              rows={3}
+            />
           </label>
 
           {notice ? <p className="notice">{notice}</p> : null}

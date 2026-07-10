@@ -1,4 +1,4 @@
-export type RatingValue = "strong" | "adequate" | "weak" | "fail";
+export type RatingValue = "strong" | "adequate" | "weak" | "fail" | "na";
 
 export type TranscriptTurn = {
   id: string;
@@ -41,6 +41,7 @@ export type CallDetail = CallSummary & {
 export type RubricOption = {
   value: RatingValue;
   label: string;
+  points: number;
   description: string;
 };
 
@@ -53,5 +54,6 @@ export type RubricSubcriterion = {
 export type RubricCriterion = {
   id: string;
   title: string;
+  description: string;
   subcriteria: RubricSubcriterion[];
 };

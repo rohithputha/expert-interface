@@ -444,8 +444,8 @@ audio {
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  gap: 10px;
-  padding: 6px 14px 14px;
+  gap: 8px;
+  padding: 6px 12px 10px;
 }
 
 .criterion-title {
@@ -456,8 +456,16 @@ audio {
 .subcriterion-heading h3 {
   margin: 0;
   min-width: 0;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.criterion-title p {
+  margin: 3px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.28;
   overflow-wrap: anywhere;
 }
 
@@ -466,12 +474,13 @@ audio {
 }
 
 .subcriterion-heading h3 {
-  font-size: 21px;
+  font-size: 17px;
 }
 
 .subcriterion-heading span {
   flex: 0 0 auto;
   color: var(--color-faint);
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -483,9 +492,9 @@ audio {
 
 .rating-option {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
-  padding: 17px 14px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
   border-top: 1px solid var(--color-line);
   background: var(--color-surface);
 }
@@ -502,9 +511,9 @@ audio {
 .radio-dot {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 3px solid var(--color-faint);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-faint);
   border-radius: 50%;
 }
 
@@ -513,32 +522,54 @@ audio {
 }
 
 .rating-option input:checked + .radio-dot::after {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--color-dark);
   content: "";
 }
 
-.rating-option strong {
+.option-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.option-head strong {
   display: block;
-  font-size: 20px;
+  min-width: 0;
+  font-size: 16px;
   line-height: 1.1;
+}
+
+.option-head em {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--color-paper);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .rating-option small {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--color-muted);
-  font-size: 15px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.26;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 .notes-label {
   display: grid;
-  gap: 8px;
-  padding: 14px;
+  gap: 6px;
+  padding: 10px 12px;
   border-top: 1px solid var(--color-line);
   color: var(--color-accent);
   font-size: 12px;
@@ -549,13 +580,13 @@ audio {
 
 textarea {
   width: 100%;
-  min-height: 116px;
+  min-height: 78px;
   resize: vertical;
   border: 2px solid var(--color-line);
   border-radius: var(--radius-sm);
   padding: 10px;
   color: var(--color-ink);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.35;
 }
 
@@ -736,15 +767,15 @@ input:focus-visible {
 
   .criterion-title h2,
   .subcriterion-heading h3 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .rating-option {
-    padding: 15px 12px;
+    padding: 9px 12px;
   }
 
-  .rating-option strong {
-    font-size: 19px;
+  .option-head strong {
+    font-size: 15px;
   }
 
   .action-bar {
