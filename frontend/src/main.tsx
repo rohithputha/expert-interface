@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
   Check,
   ChevronsUpDown,
   ChevronLeft,
@@ -300,10 +299,6 @@ function App() {
 
   return (
     <main className="app-shell">
-      <button className="queue-toggle" onClick={() => setQueueOpen(true)} aria-label="Open ungraded calls queue">
-        <BarChart3 size={18} />
-        <span>{ungradedCalls.length}</span>
-      </button>
       {queueOpen ? <button className="queue-backdrop" onClick={() => setQueueOpen(false)} aria-label="Close queue" /> : null}
 
       <aside className={`queue-panel ${queueOpen ? "is-open" : ""}`} aria-label="Review dashboard and call lists">
