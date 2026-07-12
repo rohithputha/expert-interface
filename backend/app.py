@@ -51,6 +51,20 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path.rstrip("/") == "/api/login":
+            payload = self._read_json()
+            name = str(payload.get("name", "")).strip()
+            passcode = str(payload.get("passcode", "")).strip()
+            expected_passcode = os.environ.get("EXPERT_LOGIN_CODE", "").strip()
+            if not name:
+                self._send_json({"error": "Name is required"}, status=400)
+                return
+            if expected_passcode and passcode != expected_passcode:
+                self._send_json({"error": "Invalid passcode"}, status=401)
+                return
+            self._send_json({"reviewer": {"name": name}})
+            return
+
         if parsed.path.rstrip("/") == "/api/ratings":
             payload = self._read_json()
             required = {"call_id", "ratings", "evidence"}

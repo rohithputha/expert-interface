@@ -71,12 +71,16 @@ class SQLiteRepository(CallRepository):
 
     def list_calls(self, status: str | None = None) -> list[dict[str, Any]]:
         query = """
-            select c.*, r.status as review_status, r.created_at as reviewed_at
+            select c.*, r.status as review_status, r.created_at as reviewed_at, r.reviewer as reviewed_by
             from calls c
             left join (
-              select call_id, status, max(created_at) created_at
-              from ratings
-              group by call_id
+              select r1.call_id, r1.status, r1.created_at, r1.reviewer
+              from ratings r1
+              inner join (
+                select call_id, max(created_at) created_at
+                from ratings
+                group by call_id
+              ) latest on latest.call_id = r1.call_id and latest.created_at = r1.created_at
             ) r on r.call_id = c.id
             order by c.created_at, c.id
         """
@@ -203,10 +207,10 @@ class PostgresRepository(CallRepository):
 
     def list_calls(self, status: str | None = None) -> list[dict[str, Any]]:
         query = """
-            select c.*, r.status as review_status, r.created_at as reviewed_at
+            select c.*, r.status as review_status, r.created_at as reviewed_at, r.reviewer as reviewed_by
             from calls c
             left join (
-              select distinct on (call_id) call_id, status, created_at
+              select distinct on (call_id) call_id, status, created_at, reviewer
               from ratings
               order by call_id, created_at desc
             ) r on r.call_id = c.id
@@ -311,8 +315,9 @@ def _call_summary(row: sqlite3.Row) -> dict[str, Any]:
         "reasoning": row["reasoning"],
         "recordingUrl": row["recording_url"],
         "summary": summary,
-        "reviewStatus": row["review_status"] or "unreviewed",
-        "reviewedAt": row["reviewed_at"],
+        "reviewStatus": _row_get(row, "review_status") or "unreviewed",
+        "reviewedAt": _row_get(row, "reviewed_at"),
+        "reviewedBy": _row_get(row, "reviewed_by"),
     }
 
 
@@ -345,11 +350,12 @@ def _pg_call_summary(row: dict[str, Any]) -> dict[str, Any]:
         "summary": row["summary_json"],
         "reviewStatus": row["review_status"] or "unreviewed",
         "reviewedAt": _iso(row["reviewed_at"]),
+        "reviewedBy": row.get("reviewed_by"),
     }
 
 
 def _pg_full_call(row: dict[str, Any]) -> dict[str, Any]:
-    call = _pg_call_summary({**row, "review_status": None, "reviewed_at": None})
+    call = _pg_call_summary({**row, "review_status": None, "reviewed_at": None, "reviewed_by": None})
     call["transcript"] = row["transcript_json"]
     call["toolEvents"] = row["tool_events_json"]
     call["createdAt"] = _iso(row["created_at"])
@@ -374,6 +380,10 @@ def _iso(value: Any) -> str | None:
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)
+
+
+def _row_get(row: sqlite3.Row, key: str) -> Any:
+    return row[key] if key in row.keys() else None
 
 
 def _now() -> str:

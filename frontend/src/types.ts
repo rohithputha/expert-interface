@@ -30,12 +30,23 @@ export type CallSummary = {
   };
   reviewStatus: string;
   reviewedAt?: string | null;
+  reviewedBy?: string | null;
 };
 
 export type CallDetail = CallSummary & {
   transcript: TranscriptTurn[];
   toolEvents: ToolEvent[];
-  ratingsHistory: unknown[];
+  ratingsHistory: RatingRecord[];
+};
+
+export type RatingRecord = {
+  id: string;
+  callId: string;
+  ratings: Record<string, RatingValue>;
+  evidence: string;
+  status: string;
+  reviewer?: string | null;
+  createdAt: string;
 };
 
 export type RubricOption = {
