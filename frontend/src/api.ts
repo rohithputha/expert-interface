@@ -11,6 +11,7 @@ type RatingPayload = {
   call_id: string;
   ratings: Record<string, string>;
   evidence: string;
+  timing: RatingRecord["timing"];
   status: "submitted";
   reviewer?: string;
 };
@@ -74,6 +75,7 @@ export async function saveRating(payload: RatingPayload): Promise<RatingRecord |
       callId: payload.call_id,
       ratings: payload.ratings as RatingRecord["ratings"],
       evidence: payload.evidence,
+      timing: payload.timing,
       status: payload.status,
       reviewer: payload.reviewer,
       createdAt: new Date().toISOString()

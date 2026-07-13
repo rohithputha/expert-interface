@@ -44,9 +44,15 @@ export type RatingRecord = {
   callId: string;
   ratings: Record<string, RatingValue>;
   evidence: string;
+  timing?: RatingTiming;
   status: string;
   reviewer?: string | null;
   createdAt: string;
+};
+
+export type RatingTiming = {
+  criterionMs: Record<string, number>;
+  totalMs: number;
 };
 
 export type RubricOption = {

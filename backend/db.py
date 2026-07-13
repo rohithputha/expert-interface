@@ -64,10 +64,12 @@ class SQLiteRepository(CallRepository):
                   evidence text not null,
                   status text not null,
                   reviewer text,
+                  timing_json text,
                   created_at text not null
                 );
                 """
             )
+            _sqlite_add_column(con, "ratings", "timing_json", "text")
 
     def list_calls(self, status: str | None = None) -> list[dict[str, Any]]:
         query = """
@@ -139,13 +141,14 @@ class SQLiteRepository(CallRepository):
             "evidence": payload["evidence"],
             "status": payload.get("status", "submitted"),
             "reviewer": payload.get("reviewer"),
+            "timing": payload.get("timing") or {},
             "createdAt": _now(),
         }
         with self.connect() as con:
             con.execute(
                 """
-                insert into ratings (id, call_id, ratings_json, evidence, status, reviewer, created_at)
-                values (?, ?, ?, ?, ?, ?, ?)
+                insert into ratings (id, call_id, ratings_json, evidence, status, reviewer, timing_json, created_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     rating["id"],
@@ -154,6 +157,7 @@ class SQLiteRepository(CallRepository):
                     rating["evidence"],
                     rating["status"],
                     rating["reviewer"],
+                    json.dumps(rating["timing"]),
                     rating["createdAt"],
                 ),
             )
@@ -200,10 +204,12 @@ class PostgresRepository(CallRepository):
                   evidence text not null,
                   status text not null,
                   reviewer text,
+                  timing_json jsonb,
                   created_at timestamptz not null
                 )
                 """
             )
+            con.execute("alter table ratings add column if not exists timing_json jsonb")
 
     def list_calls(self, status: str | None = None) -> list[dict[str, Any]]:
         query = """
@@ -271,13 +277,14 @@ class PostgresRepository(CallRepository):
             "evidence": payload["evidence"],
             "status": payload.get("status", "submitted"),
             "reviewer": payload.get("reviewer"),
+            "timing": payload.get("timing") or {},
             "createdAt": _now(),
         }
         with self.connect() as con:
             con.execute(
                 """
-                insert into ratings (id, call_id, ratings_json, evidence, status, reviewer, created_at)
-                values (%s, %s, %s::jsonb, %s, %s, %s, %s)
+                insert into ratings (id, call_id, ratings_json, evidence, status, reviewer, timing_json, created_at)
+                values (%s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, %s)
                 """,
                 (
                     rating["id"],
@@ -286,6 +293,7 @@ class PostgresRepository(CallRepository):
                     rating["evidence"],
                     rating["status"],
                     rating["reviewer"],
+                    json.dumps(rating["timing"]),
                     rating["createdAt"],
                 ),
             )
@@ -337,6 +345,7 @@ def _rating(row: sqlite3.Row) -> dict[str, Any]:
         "evidence": row["evidence"],
         "status": row["status"],
         "reviewer": row["reviewer"],
+        "timing": json.loads(_row_get(row, "timing_json") or "{}"),
         "createdAt": row["created_at"],
     }
 
@@ -370,6 +379,7 @@ def _pg_rating(row: dict[str, Any]) -> dict[str, Any]:
         "evidence": row["evidence"],
         "status": row["status"],
         "reviewer": row["reviewer"],
+        "timing": row.get("timing_json") or {},
         "createdAt": _iso(row["created_at"]),
     }
 
@@ -384,6 +394,12 @@ def _iso(value: Any) -> str | None:
 
 def _row_get(row: sqlite3.Row, key: str) -> Any:
     return row[key] if key in row.keys() else None
+
+
+def _sqlite_add_column(con: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    existing = {row["name"] for row in con.execute(f"pragma table_info({table})").fetchall()}
+    if column not in existing:
+        con.execute(f"alter table {table} add column {column} {definition}")
 
 
 def _now() -> str:

@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCheck,
   Headphones,
   ListChecks,
@@ -41,10 +39,13 @@ function App() {
   const [mode, setMode] = useState<ViewMode>("conversation");
   const [ratings, setRatings] = useState<Record<string, RatingValue>>({});
   const [evidenceByCriterion, setEvidenceByCriterion] = useState<Record<string, string>>({});
+  const [timingByCriterion, setTimingByCriterion] = useState<Record<string, number>>({});
+  const [timerTick, setTimerTick] = useState(0);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
   const [queueOpen, setQueueOpen] = useState(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
+  const pageStartedAt = useRef(Date.now());
 
   useEffect(() => {
     if (!reviewer) return;
@@ -63,6 +64,11 @@ function App() {
       });
   }, [reviewer]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setTimerTick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const activeCriterion = rubric[criterionIndex];
   const totalSubcriteria = rubric.reduce((sum, item) => sum + item.subcriteria.length, 0);
   const totalPages = rubric.length;
@@ -70,6 +76,9 @@ function App() {
   const activePosition = Math.max(0, calls.findIndex((call) => call.id === activeCall?.id));
   const progress = totalSubcriteria ? Math.round((Object.keys(ratings).length / totalSubcriteria) * 100) : 0;
   const isEditingRatedCall = activeCall?.reviewStatus === "submitted";
+  const activeCriterionElapsedMs = activeCriterion
+    ? (timingByCriterion[activeCriterion.id] ?? 0) + Math.max(0, Date.now() - pageStartedAt.current) + timerTick * 0
+    : 0;
   const ungradedCalls = useMemo(
     () => calls.filter((call) => call.reviewStatus !== "submitted" && !completedIds.has(call.id)),
     [calls, completedIds]
@@ -133,6 +142,7 @@ function App() {
     setCriterionIndex(0);
     setSubIndex(0);
     hydrateRatingState(next, rubric);
+    pageStartedAt.current = Date.now();
     setNotice("");
     setQueueOpen(false);
   }
@@ -149,6 +159,7 @@ function App() {
     const nextFlatIndex = flatIndex + direction;
     const nextCriterion = nextFlatIndex - 1;
     if (nextCriterion >= 0 && nextCriterion < rubric.length) {
+      commitCurrentTiming();
       setCriterionIndex(nextCriterion);
       setSubIndex(0);
       setNotice("");
@@ -158,6 +169,7 @@ function App() {
   function selectSubcriterion(flatValue: string) {
     const targetFlatIndex = Number(flatValue);
     if (targetFlatIndex >= 1 && targetFlatIndex <= totalPages) {
+      commitCurrentTiming();
       setCriterionIndex(targetFlatIndex - 1);
       setSubIndex(0);
       setNotice("");
@@ -184,10 +196,13 @@ function App() {
         return;
       }
     }
+    const finalTimingByCriterion = commitCurrentTiming();
+    const timing = buildTiming(finalTimingByCriterion);
     const saved = await saveRating({
       call_id: activeCall.id,
       ratings,
       evidence: JSON.stringify(evidenceByCriterion),
+      timing,
       status,
       reviewer: reviewer.name
     });
@@ -229,6 +244,31 @@ function App() {
     const latest = call?.ratingsHistory?.[0];
     setRatings(latest?.ratings ?? {});
     setEvidenceByCriterion(parseCriterionEvidence(latest?.evidence, rubricItems));
+    setTimingByCriterion(parseTiming(latest?.timing));
+    pageStartedAt.current = Date.now();
+  }
+
+  function withCurrentTiming() {
+    if (!activeCriterion) return timingByCriterion;
+    const elapsed = Math.max(0, Date.now() - pageStartedAt.current);
+    return {
+      ...timingByCriterion,
+      [activeCriterion.id]: (timingByCriterion[activeCriterion.id] ?? 0) + elapsed
+    };
+  }
+
+  function commitCurrentTiming() {
+    const nextTiming = withCurrentTiming();
+    setTimingByCriterion(nextTiming);
+    pageStartedAt.current = Date.now();
+    return nextTiming;
+  }
+
+  function buildTiming(criterionMs: Record<string, number>) {
+    return {
+      criterionMs,
+      totalMs: Object.values(criterionMs).reduce((sum, value) => sum + value, 0)
+    };
   }
 
   function logout() {
@@ -238,6 +278,7 @@ function App() {
     setActiveCall(null);
     setRatings({});
     setEvidenceByCriterion({});
+    setTimingByCriterion({});
     setQueueOpen(false);
   }
 
@@ -377,14 +418,6 @@ function App() {
           <div className="audio-row">
             <audio src={activeCall.recordingUrl} controls preload="metadata" />
           </div>
-          <div className="skip-row">
-            <button>
-              <ChevronLeft size={16} /> 15s
-            </button>
-            <button>
-              15s <ChevronRight size={16} />
-            </button>
-          </div>
         </header>
 
         <div className="tabs" role="tablist">
@@ -422,6 +455,7 @@ function App() {
             <span>
               Criterion {criterionIndex + 1} of {rubric.length} · {completedSubcriterionCount}/{totalSubcriteria} rated
             </span>
+            <span className="timer-pill">{formatDuration(activeCriterionElapsedMs)}</span>
             <div className="dots" aria-hidden="true">
               {rubric.map((item) => (
                 <span key={item.id} className={item.id === activeCriterion.id ? "is-active" : ""} />
@@ -654,10 +688,30 @@ function parseCriterionEvidence(evidence: string | undefined, rubricItems: Rubri
   return {};
 }
 
+function parseTiming(timing: unknown) {
+  if (!timing || typeof timing !== "object") return {};
+  const criterionMs = (timing as { criterionMs?: unknown }).criterionMs;
+  if (!criterionMs || typeof criterionMs !== "object" || Array.isArray(criterionMs)) return {};
+  return Object.entries(criterionMs).reduce<Record<string, number>>((current, [key, value]) => {
+    const ms = Number(value);
+    if (Number.isFinite(ms) && ms > 0) {
+      current[key] = ms;
+    }
+    return current;
+  }, {});
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Rated";
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function readStoredReviewer(): Reviewer | null {

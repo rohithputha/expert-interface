@@ -319,23 +319,6 @@ audio {
   color-scheme: dark;
 }
 
-.skip-row {
-  display: flex;
-  gap: 10px;
-  padding: 0 14px 12px;
-}
-
-.skip-row button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--color-dark-soft);
-  color: var(--color-surface-alt);
-  padding: 6px 9px;
-}
-
 .tabs {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -526,6 +509,16 @@ audio {
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.timer-pill {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .dots {
