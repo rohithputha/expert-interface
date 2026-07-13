@@ -31,6 +31,7 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-weight: 400;
   letter-spacing: 0;
 }
 
@@ -95,8 +96,9 @@ button:disabled {
 .queue-header h1,
 .queue-header h1 {
   margin: 0;
-  font-size: 20px;
-  line-height: 1.1;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
@@ -117,15 +119,15 @@ button:disabled {
 }
 
 .dashboard-grid span {
-  font-size: 20px;
-  font-weight: 900;
+  font-size: 19px;
+  font-weight: 650;
   line-height: 1;
 }
 
 .dashboard-grid small {
   color: var(--color-muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -141,15 +143,15 @@ button:disabled {
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-muted);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .eyebrow {
   margin: 0 0 5px;
   color: var(--color-accent);
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -161,7 +163,7 @@ button:disabled {
   border-radius: 50%;
   background: var(--color-dark);
   color: var(--color-surface);
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .search-box {
@@ -192,8 +194,8 @@ button:disabled {
   margin: 12px 0 0;
   color: var(--color-faint);
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -240,20 +242,20 @@ button:disabled {
   gap: 4px;
   color: var(--color-muted);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .empty-queue {
   margin: 14px 4px;
   color: var(--color-muted);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .rating-pill {
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -351,7 +353,7 @@ audio {
   border-bottom: 3px solid transparent;
   background: transparent;
   color: var(--color-muted);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .tabs button.is-active {
@@ -365,45 +367,39 @@ audio {
 }
 
 .conversation {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
-  min-height: 206px;
-}
-
-.turn-nav {
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: var(--color-paper);
-  color: var(--color-muted);
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .turn-stack {
   display: grid;
   align-content: start;
-  gap: 8px;
-  padding: 14px 0 0;
+  gap: 0;
+  padding: 8px 0 0;
   background: var(--color-surface);
-  min-height: 188px;
 }
 
 .turn {
-  padding: 0 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-line);
 }
 
 .turn span {
   color: var(--color-faint);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .turn p {
   margin: 4px 0 0;
   color: var(--color-ink);
-  font-size: 18px;
-  line-height: 1.35;
+  font-size: 16px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
@@ -414,7 +410,6 @@ audio {
 .turn-count {
   align-self: end;
   padding: 9px;
-  border-top: 1px solid var(--color-line);
   color: var(--color-faint);
   text-align: center;
 }
@@ -441,7 +436,7 @@ audio {
 }
 
 .tool-event summary span {
-  font-weight: 800;
+  font-weight: 650;
   overflow-wrap: anywhere;
 }
 
@@ -482,8 +477,8 @@ audio {
   background: var(--color-paper);
   color: var(--color-muted);
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -507,7 +502,7 @@ audio {
   color: var(--color-ink);
   padding: 8px 32px 8px 9px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -527,9 +522,9 @@ audio {
   gap: 10px;
   padding: 14px 14px 2px;
   color: var(--color-faint);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -567,8 +562,9 @@ audio {
 .subcriterion-heading h3 {
   margin: 0;
   min-width: 0;
-  font-size: 18px;
-  line-height: 1.12;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.18;
   overflow-wrap: anywhere;
 }
 
@@ -585,20 +581,56 @@ audio {
 }
 
 .subcriterion-heading h3 {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .subcriterion-heading span {
   flex: 0 0 auto;
   color: var(--color-faint);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .rating-options {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+.criterion-question-page {
+  display: grid;
+}
+
+.subquestion-block {
+  border-top: 1px solid var(--color-line);
+}
+
+.subquestion-block:first-of-type {
+  border-top: 0;
+}
+
+.subquestion-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 6px;
+  background: var(--color-paper);
+}
+
+.subquestion-title h3 {
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.subquestion-title span {
+  flex: 0 0 auto;
+  color: var(--color-faint);
+  font-size: 12px;
 }
 
 .rating-option {
@@ -651,8 +683,9 @@ audio {
 .option-head strong {
   display: block;
   min-width: 0;
-  font-size: 16px;
-  line-height: 1.1;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.15;
 }
 
 .option-head em {
@@ -663,7 +696,7 @@ audio {
   color: var(--color-muted);
   font-size: 11px;
   font-style: normal;
-  font-weight: 900;
+  font-weight: 650;
   white-space: nowrap;
 }
 
@@ -684,8 +717,8 @@ audio {
   border-top: 1px solid var(--color-line);
   color: var(--color-accent);
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -711,7 +744,7 @@ input:focus-visible {
 .notice {
   margin: 0 14px 12px;
   color: var(--color-accent);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .action-bar {
@@ -733,8 +766,8 @@ input:focus-visible {
   gap: 7px;
   min-height: 54px;
   border-radius: var(--radius-sm);
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
@@ -788,8 +821,9 @@ input:focus-visible {
 
 .login-card h1 {
   margin: 0;
-  font-size: 28px;
-  line-height: 1;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.05;
 }
 
 .login-card label {
@@ -797,8 +831,8 @@ input:focus-visible {
   gap: 6px;
   color: var(--color-muted);
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -832,7 +866,8 @@ input:focus-visible {
 
 .state-message strong {
   color: var(--color-ink);
-  font-size: 20px;
+  font-size: 19px;
+  font-weight: 650;
 }
 
 .state-message span {
@@ -953,14 +988,15 @@ input:focus-visible {
   }
 
   .mobile-dashboard strong {
-    font-size: 18px;
+    font-size: 17px;
+    font-weight: 650;
     line-height: 1;
   }
 
   .mobile-dashboard span {
     color: var(--color-muted);
     font-size: 11px;
-    font-weight: 900;
+    font-weight: 600;
     text-transform: uppercase;
   }
 
@@ -973,7 +1009,7 @@ input:focus-visible {
     border-radius: var(--radius-sm);
     background: var(--color-paper);
     color: var(--color-ink);
-    font-weight: 900;
+    font-weight: 650;
   }
 }
 
@@ -988,12 +1024,12 @@ input:focus-visible {
   }
 
   .turn p {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .criterion-title h2,
   .subcriterion-heading h3 {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .rating-option {
@@ -1001,7 +1037,7 @@ input:focus-visible {
   }
 
   .option-head strong {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .action-bar {
@@ -1012,7 +1048,7 @@ input:focus-visible {
 
   .action-bar button {
     min-height: 50px;
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
@@ -1020,10 +1056,6 @@ input:focus-visible {
   .tabs button {
     gap: 4px;
     font-size: 14px;
-  }
-
-  .conversation {
-    grid-template-columns: 28px minmax(0, 1fr) 28px;
   }
 
   .subcriterion-heading {

@@ -64,12 +64,9 @@ function App() {
   }, [reviewer]);
 
   const activeCriterion = rubric[criterionIndex];
-  const activeSubcriterion = activeCriterion?.subcriteria[subIndex];
-  const isEvidencePage = Boolean(activeCriterion && subIndex === activeCriterion.subcriteria.length);
   const totalSubcriteria = rubric.reduce((sum, item) => sum + item.subcriteria.length, 0);
-  const totalPages = totalSubcriteria + rubric.length;
-  const flatIndex =
-    rubric.slice(0, criterionIndex).reduce((sum, item) => sum + item.subcriteria.length + 1, 0) + subIndex + 1;
+  const totalPages = rubric.length;
+  const flatIndex = criterionIndex + 1;
   const activePosition = Math.max(0, calls.findIndex((call) => call.id === activeCall?.id));
   const progress = totalSubcriteria ? Math.round((Object.keys(ratings).length / totalSubcriteria) * 100) : 0;
   const isEditingRatedCall = activeCall?.reviewStatus === "submitted";
@@ -106,9 +103,9 @@ function App() {
     });
   }, [myRatedCalls, query]);
 
-  function activeSubcriterionReady() {
-    if (!activeSubcriterion) return false;
-    return Boolean(ratings[activeSubcriterion.id]);
+  function activeCriterionRatingsReady() {
+    if (!activeCriterion) return false;
+    return activeCriterion.subcriteria.every((subcriterion) => ratings[subcriterion.id]);
   }
 
   function activeEvidenceReady() {
@@ -119,14 +116,12 @@ function App() {
   function firstIncompletePage() {
     for (let nextCriterionIndex = 0; nextCriterionIndex < rubric.length; nextCriterionIndex += 1) {
       const criterion = rubric[nextCriterionIndex];
-      for (let nextSubIndex = 0; nextSubIndex < criterion.subcriteria.length; nextSubIndex += 1) {
-        const subcriterion = criterion.subcriteria[nextSubIndex];
-        if (!ratings[subcriterion.id]) {
-          return { criterionIndex: nextCriterionIndex, subIndex: nextSubIndex, title: subcriterion.title };
-        }
+      const incompleteSubcriterion = criterion.subcriteria.find((subcriterion) => !ratings[subcriterion.id]);
+      if (incompleteSubcriterion) {
+        return { criterionIndex: nextCriterionIndex, subIndex: 0, title: criterion.title };
       }
       if (!evidenceByCriterion[criterion.id]?.trim()) {
-        return { criterionIndex: nextCriterionIndex, subIndex: criterion.subcriteria.length, title: `${criterion.title} evidence` };
+        return { criterionIndex: nextCriterionIndex, subIndex: 0, title: `${criterion.title} evidence` };
       }
     }
     return null;
@@ -143,57 +138,41 @@ function App() {
   }
 
   function stepRubric(direction: 1 | -1) {
-    if (direction === 1 && activeSubcriterion && !activeSubcriterionReady()) {
-      setNotice("Select a rating before moving to the next question.");
+    if (direction === 1 && !activeCriterionRatingsReady()) {
+      setNotice("Rate every question in this criterion before moving on.");
       return;
     }
-    if (direction === 1 && isEvidencePage && !activeEvidenceReady()) {
+    if (direction === 1 && !activeEvidenceReady()) {
       setNotice("Add evidence / notes before moving to the next criterion.");
       return;
     }
-    let nextCriterion = criterionIndex;
-    let nextSub = subIndex + direction;
-    if (nextSub > (rubric[nextCriterion]?.subcriteria.length ?? 0)) {
-      nextCriterion += 1;
-      nextSub = 0;
-    }
-    if (nextSub < 0) {
-      nextCriterion -= 1;
-      nextSub = Math.max(0, rubric[nextCriterion]?.subcriteria.length ?? 0);
-    }
+    const nextFlatIndex = flatIndex + direction;
+    const nextCriterion = nextFlatIndex - 1;
     if (nextCriterion >= 0 && nextCriterion < rubric.length) {
       setCriterionIndex(nextCriterion);
-      setSubIndex(nextSub);
+      setSubIndex(0);
       setNotice("");
     }
   }
 
   function selectSubcriterion(flatValue: string) {
     const targetFlatIndex = Number(flatValue);
-    let cursor = 0;
-    for (let nextCriterionIndex = 0; nextCriterionIndex < rubric.length; nextCriterionIndex += 1) {
-      const criterion = rubric[nextCriterionIndex];
-      for (let nextSubIndex = 0; nextSubIndex <= criterion.subcriteria.length; nextSubIndex += 1) {
-        cursor += 1;
-        if (cursor === targetFlatIndex) {
-          setCriterionIndex(nextCriterionIndex);
-          setSubIndex(nextSubIndex);
-          setNotice("");
-          return;
-        }
-      }
+    if (targetFlatIndex >= 1 && targetFlatIndex <= totalPages) {
+      setCriterionIndex(targetFlatIndex - 1);
+      setSubIndex(0);
+      setNotice("");
     }
   }
 
   async function submit(status: "submitted") {
     if (!activeCall || !activeCriterion || !reviewer) return;
     if (isEditingRatedCall) {
-      if (isEvidencePage && !activeEvidenceReady()) {
-        setNotice("Add evidence / notes for this criterion before updating.");
+      if (!activeCriterionRatingsReady()) {
+        setNotice("Rate every question in this criterion before updating.");
         return;
       }
-      if (!isEvidencePage && !activeSubcriterionReady()) {
-        setNotice("Select a rating for this item before updating.");
+      if (!activeEvidenceReady()) {
+        setNotice("Add evidence / notes for this criterion before updating.");
         return;
       }
     } else {
@@ -425,23 +404,15 @@ function App() {
           {isEditingRatedCall ? (
             <label className="edit-selector">
               <span>
-                <RotateCcw size={15} /> Edit item
+                <RotateCcw size={15} /> Edit criterion
               </span>
               <div>
                 <select value={flatIndex} onChange={(event) => selectSubcriterion(event.target.value)}>
-                  {rubric.flatMap((criterion, outerIndex) =>
-                    [...criterion.subcriteria, null].map((subcriterion, innerIndex) => {
-                      const value =
-                        rubric.slice(0, outerIndex).reduce((sum, item) => sum + item.subcriteria.length + 1, 0) +
-                        innerIndex +
-                        1;
-                      return (
-                        <option value={value} key={subcriterion?.id ?? `${criterion.id}-evidence`}>
-                          {value}. {criterion.title} - {subcriterion?.title ?? "Evidence / notes"}
-                        </option>
-                      );
-                    })
-                  )}
+                  {rubric.map((criterion, outerIndex) => (
+                    <option value={outerIndex + 1} key={criterion.id}>
+                      {outerIndex + 1}. {criterion.title}
+                    </option>
+                  ))}
                 </select>
                 <ChevronsUpDown size={15} aria-hidden="true" />
               </div>
@@ -464,7 +435,47 @@ function App() {
               <p>{activeCriterion.description}</p>
             </div>
           </div>
-          {isEvidencePage ? (
+          <section className="criterion-question-page">
+            <div className="subcriterion-heading">
+              <h3>Questions</h3>
+              <span>{activeCriterion.subcriteria.length} items</span>
+            </div>
+
+            {activeCriterion.subcriteria.map((subcriterion, itemIndex) => (
+              <section className="subquestion-block" key={subcriterion.id}>
+                <div className="subquestion-title">
+                  <h3>{subcriterion.title}</h3>
+                  <span>
+                    {itemIndex + 1}/{activeCriterion.subcriteria.length}
+                  </span>
+                </div>
+                <fieldset className="rating-options">
+                  <legend className="sr-only">Rating options for {subcriterion.title}</legend>
+                  {subcriterion.options.map((option) => (
+                    <label className="rating-option" key={option.value}>
+                      <input
+                        type="radio"
+                        name={subcriterion.id}
+                        checked={ratings[subcriterion.id] === option.value}
+                        onChange={() => setRatings((current) => ({ ...current, [subcriterion.id]: option.value }))}
+                      />
+                      <span className="radio-dot" aria-hidden="true" />
+                      <span>
+                        <span className="option-head">
+                          <strong>
+                            {option.label}
+                            {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
+                          </strong>
+                          <em>{option.points} pts</em>
+                        </span>
+                        <small>{option.description}</small>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              </section>
+            ))}
+
             <section className="criterion-evidence-page">
               <div className="subcriterion-heading">
                 <h3>Evidence / notes</h3>
@@ -484,41 +495,7 @@ function App() {
                 />
               </label>
             </section>
-          ) : activeSubcriterion ? (
-            <>
-              <div className="subcriterion-heading">
-                <h3>{activeSubcriterion.title}</h3>
-                <span>
-                  Sub {subIndex + 1} of {activeCriterion.subcriteria.length}
-                </span>
-              </div>
-
-              <fieldset className="rating-options">
-                <legend className="sr-only">Rating options</legend>
-                {activeSubcriterion.options.map((option) => (
-                  <label className="rating-option" key={option.value}>
-                    <input
-                      type="radio"
-                      name={activeSubcriterion.id}
-                      checked={ratings[activeSubcriterion.id] === option.value}
-                      onChange={() => setRatings((current) => ({ ...current, [activeSubcriterion.id]: option.value }))}
-                    />
-                    <span className="radio-dot" aria-hidden="true" />
-                    <span>
-                      <span className="option-head">
-                        <strong>
-                          {option.label}
-                          {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
-                        </strong>
-                        <em>{option.points} pts</em>
-                      </span>
-                      <small>{option.description}</small>
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-            </>
-          ) : null}
+          </section>
 
           {notice ? <p className="notice">{notice}</p> : null}
 
@@ -604,15 +581,10 @@ function LoginScreen({ onLogin }: { onLogin: (reviewer: Reviewer) => void }) {
 }
 
 function Conversation({ call }: { call: CallDetail }) {
-  const [turnIndex, setTurnIndex] = useState(0);
-  const visible = call.transcript.slice(turnIndex, turnIndex + 1);
   return (
     <div className="conversation">
-      <button className="turn-nav" onClick={() => setTurnIndex((value) => Math.max(0, value - 1))} aria-label="Previous turn">
-        <ChevronLeft size={18} />
-      </button>
       <div className="turn-stack">
-        {visible.map((turn) => (
+        {call.transcript.map((turn) => (
           <article className={`turn ${turn.speaker}`} key={turn.id}>
             <span>
               {turn.speaker} · {turn.timestamp}
@@ -621,16 +593,9 @@ function Conversation({ call }: { call: CallDetail }) {
           </article>
         ))}
         <div className="turn-count">
-          {Math.min(turnIndex + 1, call.transcript.length)} / {call.transcript.length} turns
+          {call.transcript.length} turns
         </div>
       </div>
-      <button
-        className="turn-nav"
-        onClick={() => setTurnIndex((value) => Math.min(call.transcript.length - 1, value + 1))}
-        aria-label="Next turn"
-      >
-        <ChevronRight size={18} />
-      </button>
     </div>
   );
 }
