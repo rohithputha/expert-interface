@@ -97,20 +97,20 @@ export const fallbackRubric: RubricCriterion[] = [
         ]
       },
       {
-        "id": "escalation_path_warm_handoff",
-        "title": "Escalation path & warm handoff",
+        "id": "escalation_path",
+        "title": "Escalation path",
         "options": [
           {
             "value": "strong",
             "label": "Strong",
             "points": 4,
-            "description": "• Recognizes when to escalate: unresolved issue, caller requests supervisor, or situation exceeds agent scope\n• Warm transfer: receiving agent/supervisor already has full context in the system\n• No blind transfers; caller never has to re-state identity or issue"
+            "description": "• Recognizes when to escalate: unresolved issue, caller requests supervisor, or situation exceeds agent scope\n• No blind transfers; caller never has to re-state identity or issue"
           },
           {
             "value": "adequate",
             "label": "Adequate",
             "points": 3,
-            "description": "• Escalates when clearly needed; handoff mostly smooth\n• Minor context gap on receiving end but caller not significantly burdened"
+            "description": "• Escalates when clearly needed\n• Minor context gap on receiving end but caller not significantly burdened"
           },
           {
             "value": "weak",
@@ -122,7 +122,7 @@ export const fallbackRubric: RubricCriterion[] = [
             "value": "fail",
             "label": "Fail",
             "points": 1,
-            "description": "• Blind transfer with no context passed\n• Fails to escalate when situation clearly requires it\n• Caller re-states full identity and issue to receiving agent"
+            "description": "• Blind transfer with no context passed\n• Caller re-states full identity and issue to receiving agent"
           }
         ]
       },
@@ -164,32 +164,62 @@ export const fallbackRubric: RubricCriterion[] = [
     "description": "Agent sounds conversational, mirrors the caller's emotional register, listens actively, and ensures the caller always knows what is happening.",
     "subcriteria": [
       {
-        "id": "tone_emotional_adaptation",
-        "title": "Tone & emotional adaptation",
+        "id": "tone_emotional_mirroring_voice_eval",
+        "title": "Tone & Emotional Mirroring (voice eval)",
         "options": [
           {
             "value": "strong",
             "label": "Strong",
             "points": 4,
-            "description": "• Mirrors caller's emotional register naturally\n• Warm and empathetic with distressed or confused callers\n• Adjusts pacing for elderly or anxious callers\n• Caller consistently feels heard"
+            "description": "• Mirrors caller's emotional register naturally, warm with distressed callers, efficient with task-focused callers\n• Warm and empathetic with distressed or confused callers\n• Adjusts pacing for elderly or anxious callers\n• Caller consistently feels heard"
           },
           {
             "value": "adequate",
             "label": "Adequate",
             "points": 3,
-            "description": "• Generally warm and clear\n• Minor stiffness but caller is not alienated or left unsupported"
+            "description": "• Generally warm and clear\n• Minor stiffness but caller is not alienated or left unsupported \n• Adapts tone at least once when caller signals distress, even if delayed"
           },
           {
             "value": "weak",
             "label": "Weak",
             "points": 2,
-            "description": "• Tone mismatch with a distressed or confused caller\n• Upbeat or scripted tone when caller is clearly upset"
+            "description": "• Tone mismatch with a distressed or confused caller\n• Upbeat or scripted tone when caller is clearly upset."
           },
           {
             "value": "fail",
             "label": "Fail",
             "points": 1,
-            "description": "• Completely ignores emotional register of a distressed caller\n• Robotic or dismissive response when empathy was clearly needed\n• Sounds like it is reading a script rather than listening"
+            "description": "• Completely ignores emotional register of a distressed caller\n• Robotic or dismissive response when empathy was clearly needed\n• Sounds like it is reading a script rather than listening."
+          }
+        ]
+      },
+      {
+        "id": "acoustic_presence_silence_handling_voice_eval",
+        "title": "Acoustic Presence & Silence Handling (voice eval)",
+        "options": [
+          {
+            "value": "strong",
+            "label": "Strong",
+            "points": 4,
+            "description": "• Processing pauses bridged with brief verbal cues (\"Just a moment…\", \"Let me check on that\") \n• No dead air that causes caller to question whether the line is live"
+          },
+          {
+            "value": "adequate",
+            "label": "Adequate",
+            "points": 3,
+            "description": "Occasional short silence (3 to 5s) quickly recovered with acknowledgment or filler; caller does not express confusion"
+          },
+          {
+            "value": "weak",
+            "label": "Weak",
+            "points": 2,
+            "description": "• Repeated silences of 3–5s with no bridging phrase; caller audibly waits, re prompts, or says \"Hello?\" \n• Agent does not acknowledge the gap after returning"
+          },
+          {
+            "value": "fail",
+            "label": "Fail",
+            "points": 1,
+            "description": "• Multiple long silences (5s+) go entirely unacknowledged. \n• Unacknowledged dead air is repeated, call feels broken or dropped. \n• Caller abandons or has to restart interaction due to silence"
           }
         ]
       },
@@ -382,31 +412,31 @@ export const fallbackRubric: RubricCriterion[] = [
       },
       {
         "id": "turn_economy_no_idle_circular_turns",
-        "title": "Turn economy (no idle/circular turns)",
+        "title": "Turn economy(no idle/circular turns)",
         "options": [
           {
             "value": "strong",
             "label": "Strong",
             "points": 4,
-            "description": "• Every agent turn moves the task forward\n• No filler turns, no resets, no circular steps"
+            "description": "• Every agent turn moves the task forward along the correct workflow path\n• Task completed in the minimum number of steps the workflow requires\n• No information collected twice\n• No confirmations or clarifications requested that a prior answer already resolved\n• No branch offered or explored that the caller's earlier response had already ruled out\n• No filler turns, no resets, no circular steps."
           },
           {
             "value": "adequate",
             "label": "Adequate",
             "points": 3,
-            "description": "• One or two extra turns that don't materially slow resolution"
+            "description": "• One unnecessary step or one piece of re-collected information, but overall path is close to optimal\n• One or two extra turns that don't materially slow resolution\n• Minor inefficiency that a caller would not notice or be frustrated by"
           },
           {
             "value": "weak",
             "label": "Weak",
             "points": 2,
-            "description": "• Caller redirects the agent once before progress resumes"
+            "description": "• Skipped a workflow branch that required backtracking later\n• Asked for information the caller already provided\n• Offered or explored an option the caller's earlier answer had already ruled out\n• Caller had to redirect the agent once before progress resumed\n• Task completed but via a noticeably longer path than necessary"
           },
           {
             "value": "fail",
             "label": "Fail",
             "points": 1,
-            "description": "• Caller redirects agent multiple times and task still doesn't resolve\n• Each turn resets rather than building on prior context"
+            "description": "• Multiple instances of re-collecting information, wrong branches, or resets\n• Caller redirects agent multiple times and task still doesn't resolve\n• Each turn resets rather than building on prior context\n• Task completed (if at all) in significantly more turns than the workflow requires — caller experience is materially degraded by the inefficiency"
           }
         ]
       },
