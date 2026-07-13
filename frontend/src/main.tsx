@@ -74,7 +74,7 @@ function App() {
   const totalPages = rubric.length;
   const flatIndex = criterionIndex + 1;
   const activePosition = Math.max(0, calls.findIndex((call) => call.id === activeCall?.id));
-  const progress = totalSubcriteria ? Math.round((Object.keys(ratings).length / totalSubcriteria) * 100) : 0;
+  const progress = totalSubcriteria ? Math.min(100, Math.round((Object.keys(ratings).length / totalSubcriteria) * 100)) : 0;
   const isEditingRatedCall = activeCall?.reviewStatus === "submitted";
   const activeCriterionElapsedMs = activeCriterion
     ? (timingByCriterion[activeCriterion.id] ?? 0) + Math.max(0, Date.now() - pageStartedAt.current) + timerTick * 0
