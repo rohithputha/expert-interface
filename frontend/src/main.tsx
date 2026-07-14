@@ -407,155 +407,159 @@ function App() {
             <Menu size={16} /> Calls
           </button>
         </div>
-        <header className="player">
-          <div className="status-strip">
-            <Headphones size={16} aria-hidden="true" />
-            <span>
-              Call {activePosition + 1} of {calls.length}
-            </span>
-            <span>{progress}% scored</span>
-          </div>
-          <div className="audio-row">
-            <audio src={activeCall.recordingUrl} controls preload="metadata" />
-          </div>
-        </header>
+        <div className="review-column">
+          <header className="player">
+            <div className="status-strip">
+              <Headphones size={16} aria-hidden="true" />
+              <span>
+                Call {activePosition + 1} of {calls.length}
+              </span>
+              <span>{progress}% scored</span>
+            </div>
+            <div className="audio-row">
+              <audio src={activeCall.recordingUrl} controls preload="metadata" />
+            </div>
+          </header>
 
-        <div className="tabs" role="tablist">
-          <button className={mode === "conversation" ? "is-active" : ""} onClick={() => setMode("conversation")}>
-            <ClipboardCheck size={17} /> Conversation
-          </button>
-          <button className={mode === "tools" ? "is-active" : ""} onClick={() => setMode("tools")}>
-            <Wrench size={17} /> Tool calls
-          </button>
+          <section className="rating-card">
+            {isEditingRatedCall ? (
+              <label className="edit-selector">
+                <span>
+                  <RotateCcw size={15} /> Edit criterion
+                </span>
+                <div>
+                  <select value={flatIndex} onChange={(event) => selectSubcriterion(event.target.value)}>
+                    {rubric.map((criterion, outerIndex) => (
+                      <option value={outerIndex + 1} key={criterion.id}>
+                        {outerIndex + 1}. {criterion.title}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronsUpDown size={15} aria-hidden="true" />
+                </div>
+              </label>
+            ) : null}
+            <div className="criterion-topline">
+              <span>
+                Criterion {criterionIndex + 1} of {rubric.length} · {completedSubcriterionCount}/{totalSubcriteria} rated
+              </span>
+              <span className="timer-pill">{formatDuration(activeCriterionElapsedMs)}</span>
+              <div className="dots" aria-hidden="true">
+                {rubric.map((item) => (
+                  <span key={item.id} className={item.id === activeCriterion.id ? "is-active" : ""} />
+                ))}
+              </div>
+            </div>
+            <div className="criterion-title">
+              <ShieldCheck size={19} aria-hidden="true" />
+              <div>
+                <h2>{activeCriterion.title}</h2>
+                <p>{activeCriterion.description}</p>
+              </div>
+            </div>
+            <section className="criterion-question-page">
+              <div className="subcriterion-heading">
+                <h3>Questions</h3>
+                <span>{activeCriterion.subcriteria.length} items</span>
+              </div>
+
+              {activeCriterion.subcriteria.map((subcriterion, itemIndex) => (
+                <section className="subquestion-block" key={subcriterion.id}>
+                  <div className="subquestion-title">
+                    <h3>{subcriterion.title}</h3>
+                    <span>
+                      {itemIndex + 1}/{activeCriterion.subcriteria.length}
+                    </span>
+                  </div>
+                  <fieldset className="rating-options">
+                    <legend className="sr-only">Rating options for {subcriterion.title}</legend>
+                    {subcriterion.options.map((option) => (
+                      <label className="rating-option" key={option.value}>
+                        <input
+                          type="radio"
+                          name={subcriterion.id}
+                          checked={ratings[subcriterion.id] === option.value}
+                          onChange={() => setRatings((current) => ({ ...current, [subcriterion.id]: option.value }))}
+                        />
+                        <span className="radio-dot" aria-hidden="true" />
+                        <span>
+                          <span className="option-head">
+                            <strong>
+                              {option.label}
+                              {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
+                            </strong>
+                            <em>{option.points} pts</em>
+                          </span>
+                          <small>{option.description}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                </section>
+              ))}
+
+              <section className="criterion-evidence-page">
+                <div className="subcriterion-heading">
+                  <h3>Evidence / notes</h3>
+                  <span>Required</span>
+                </div>
+                <label className="notes-label criterion-notes">
+                  Evidence for {activeCriterion.title} *
+                  <textarea
+                    value={evidenceByCriterion[activeCriterion.id] ?? ""}
+                    onChange={(event) =>
+                      setEvidenceByCriterion((current) => ({
+                        ...current,
+                        [activeCriterion.id]: event.target.value
+                      }))
+                    }
+                    rows={5}
+                  />
+                </label>
+              </section>
+            </section>
+
+            {notice ? <p className="notice">{notice}</p> : null}
+
+            <div className="action-bar">
+              {isEditingRatedCall ? (
+                <button className="primary-action full-action" onClick={() => submit("submitted")}>
+                  Update <Check size={18} />
+                </button>
+              ) : (
+                <>
+                  <button className="secondary-action" onClick={() => stepRubric(-1)} disabled={flatIndex === 1}>
+                    <ArrowLeft size={18} /> Back
+                  </button>
+                  {flatIndex === totalPages ? (
+                    <button className="primary-action" onClick={() => submit("submitted")}>
+                      Submit <Check size={18} />
+                    </button>
+                  ) : (
+                    <button className="primary-action" onClick={() => stepRubric(1)}>
+                      Next <ArrowRight size={18} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
         </div>
 
-        <section className="evidence-view">
-          {mode === "conversation" ? <Conversation call={activeCall} /> : <ToolCalls call={activeCall} />}
-        </section>
-
-        <section className="rating-card">
-          {isEditingRatedCall ? (
-            <label className="edit-selector">
-              <span>
-                <RotateCcw size={15} /> Edit criterion
-              </span>
-              <div>
-                <select value={flatIndex} onChange={(event) => selectSubcriterion(event.target.value)}>
-                  {rubric.map((criterion, outerIndex) => (
-                    <option value={outerIndex + 1} key={criterion.id}>
-                      {outerIndex + 1}. {criterion.title}
-                    </option>
-                  ))}
-                </select>
-                <ChevronsUpDown size={15} aria-hidden="true" />
-              </div>
-            </label>
-          ) : null}
-          <div className="criterion-topline">
-            <span>
-              Criterion {criterionIndex + 1} of {rubric.length} · {completedSubcriterionCount}/{totalSubcriteria} rated
-            </span>
-            <span className="timer-pill">{formatDuration(activeCriterionElapsedMs)}</span>
-            <div className="dots" aria-hidden="true">
-              {rubric.map((item) => (
-                <span key={item.id} className={item.id === activeCriterion.id ? "is-active" : ""} />
-              ))}
-            </div>
+        <aside className="transcript-panel" aria-label="Call evidence">
+          <div className="tabs" role="tablist">
+            <button className={mode === "conversation" ? "is-active" : ""} onClick={() => setMode("conversation")}>
+              <ClipboardCheck size={17} /> Conversation
+            </button>
+            <button className={mode === "tools" ? "is-active" : ""} onClick={() => setMode("tools")}>
+              <Wrench size={17} /> Tool calls
+            </button>
           </div>
-          <div className="criterion-title">
-            <ShieldCheck size={19} aria-hidden="true" />
-            <div>
-              <h2>{activeCriterion.title}</h2>
-              <p>{activeCriterion.description}</p>
-            </div>
-          </div>
-          <section className="criterion-question-page">
-            <div className="subcriterion-heading">
-              <h3>Questions</h3>
-              <span>{activeCriterion.subcriteria.length} items</span>
-            </div>
 
-            {activeCriterion.subcriteria.map((subcriterion, itemIndex) => (
-              <section className="subquestion-block" key={subcriterion.id}>
-                <div className="subquestion-title">
-                  <h3>{subcriterion.title}</h3>
-                  <span>
-                    {itemIndex + 1}/{activeCriterion.subcriteria.length}
-                  </span>
-                </div>
-                <fieldset className="rating-options">
-                  <legend className="sr-only">Rating options for {subcriterion.title}</legend>
-                  {subcriterion.options.map((option) => (
-                    <label className="rating-option" key={option.value}>
-                      <input
-                        type="radio"
-                        name={subcriterion.id}
-                        checked={ratings[subcriterion.id] === option.value}
-                        onChange={() => setRatings((current) => ({ ...current, [subcriterion.id]: option.value }))}
-                      />
-                      <span className="radio-dot" aria-hidden="true" />
-                      <span>
-                        <span className="option-head">
-                          <strong>
-                            {option.label}
-                            {option.value === "strong" ? " ✓" : option.value === "fail" ? " ×" : ""}
-                          </strong>
-                          <em>{option.points} pts</em>
-                        </span>
-                        <small>{option.description}</small>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-              </section>
-            ))}
-
-            <section className="criterion-evidence-page">
-              <div className="subcriterion-heading">
-                <h3>Evidence / notes</h3>
-                <span>Required</span>
-              </div>
-              <label className="notes-label criterion-notes">
-                Evidence for {activeCriterion.title} *
-                <textarea
-                  value={evidenceByCriterion[activeCriterion.id] ?? ""}
-                  onChange={(event) =>
-                    setEvidenceByCriterion((current) => ({
-                      ...current,
-                      [activeCriterion.id]: event.target.value
-                    }))
-                  }
-                  rows={5}
-                />
-              </label>
-            </section>
+          <section className="evidence-view">
+            {mode === "conversation" ? <Conversation call={activeCall} /> : <ToolCalls call={activeCall} />}
           </section>
-
-          {notice ? <p className="notice">{notice}</p> : null}
-
-          <div className="action-bar">
-            {isEditingRatedCall ? (
-              <button className="primary-action full-action" onClick={() => submit("submitted")}>
-                Update <Check size={18} />
-              </button>
-            ) : (
-              <>
-                <button className="secondary-action" onClick={() => stepRubric(-1)} disabled={flatIndex === 1}>
-                  <ArrowLeft size={18} /> Back
-                </button>
-                {flatIndex === totalPages ? (
-                  <button className="primary-action" onClick={() => submit("submitted")}>
-                    Submit <Check size={18} />
-                  </button>
-                ) : (
-                  <button className="primary-action" onClick={() => stepRubric(1)}>
-                    Next <ArrowRight size={18} />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </section>
+        </aside>
       </section>
     </main>
   );
