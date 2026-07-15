@@ -363,6 +363,10 @@ audio {
   background: var(--color-surface);
 }
 
+.tabs.tabs-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .tabs button {
   display: inline-flex;
   align-items: center;

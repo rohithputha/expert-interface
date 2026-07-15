@@ -588,17 +588,14 @@ function App() {
         </div>
 
         <aside className="transcript-panel" aria-label="Call evidence">
-          <div className="tabs" role="tablist">
+          <div className="tabs tabs-single" role="tablist">
             <button className={mode === "conversation" ? "is-active" : ""} onClick={() => setMode("conversation")}>
               <ClipboardCheck size={17} /> Conversation
-            </button>
-            <button className={mode === "tools" ? "is-active" : ""} onClick={() => setMode("tools")}>
-              <Wrench size={17} /> Tool calls
             </button>
           </div>
 
           <section className="evidence-view">
-            {mode === "conversation" ? <Conversation call={activeCall} /> : <ToolCalls call={activeCall} />}
+            <Conversation call={activeCall} />
           </section>
         </aside>
       </section>
