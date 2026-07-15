@@ -580,13 +580,13 @@ audio {
 
 .timer-pill {
   flex: 0 0 auto;
-  padding: 5px 8px;
+  padding: 6px 10px;
   border: 1px solid #d7cec1;
   border-radius: var(--radius-sm);
   background: #fbfaf7;
   color: var(--color-ink);
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 

@@ -26,6 +26,7 @@ type LoadState = "loading" | "ready" | "empty" | "error";
 type Reviewer = { name: string };
 
 const REVIEWER_KEY = "expert-interface:reviewer";
+const HIDDEN_CRITERION_IDS = new Set(["workflow_adherence"]);
 
 function App() {
   const [reviewer, setReviewer] = useState<Reviewer | null>(() => readStoredReviewer());
@@ -43,6 +44,7 @@ function App() {
   const [timerTick, setTimerTick] = useState(0);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
+  const [isSavingPage, setIsSavingPage] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
   const pageStartedAt = useRef(Date.now());
@@ -52,10 +54,11 @@ function App() {
     setLoadState("loading");
     loadInitialData()
       .then((data) => {
+        const visibleRubric = visibleRubricItems(data.rubric);
         setCalls(data.calls);
         setActiveCall(data.activeCall);
-        setRubric(data.rubric);
-        hydrateRatingState(data.activeCall, data.rubric);
+        setRubric(visibleRubric);
+        hydrateRatingState(data.activeCall, visibleRubric);
         setLoadState(data.activeCall ? "ready" : "empty");
       })
       .catch((error: unknown) => {
@@ -74,7 +77,7 @@ function App() {
   const totalPages = rubric.length;
   const flatIndex = criterionIndex + 1;
   const activePosition = Math.max(0, calls.findIndex((call) => call.id === activeCall?.id));
-  const progress = totalSubcriteria ? Math.min(100, Math.round((Object.keys(ratings).length / totalSubcriteria) * 100)) : 0;
+  const progress = totalSubcriteria ? Math.round((completedVisibleRatingCount(ratings, rubric) / totalSubcriteria) * 100) : 0;
   const isEditingRatedCall = activeCall?.reviewStatus === "submitted";
   const activeCriterionElapsedMs = activeCriterion
     ? (timingByCriterion[activeCriterion.id] ?? 0) + Math.max(0, Date.now() - pageStartedAt.current) + timerTick * 0
@@ -147,7 +150,7 @@ function App() {
     setQueueOpen(false);
   }
 
-  function stepRubric(direction: 1 | -1) {
+  async function stepRubric(direction: 1 | -1) {
     if (direction === 1 && !activeCriterionRatingsReady()) {
       setNotice("Rate every question in this criterion before moving on.");
       return;
@@ -159,7 +162,12 @@ function App() {
     const nextFlatIndex = flatIndex + direction;
     const nextCriterion = nextFlatIndex - 1;
     if (nextCriterion >= 0 && nextCriterion < rubric.length) {
-      commitCurrentTiming();
+      if (direction === 1) {
+        const saved = await saveCurrentPageDraft();
+        if (!saved) return;
+      } else {
+        commitCurrentTiming();
+      }
       setCriterionIndex(nextCriterion);
       setSubIndex(0);
       setNotice("");
@@ -269,6 +277,39 @@ function App() {
       criterionMs,
       totalMs: Object.values(criterionMs).reduce((sum, value) => sum + value, 0)
     };
+  }
+
+  async function saveCurrentPageDraft() {
+    if (!activeCall || !activeCriterion || !reviewer) return false;
+    const finalTimingByCriterion = withCurrentTiming();
+    const timing = buildTiming(finalTimingByCriterion);
+    setIsSavingPage(true);
+    try {
+      const saved = await saveRating({
+        call_id: activeCall.id,
+        ratings,
+        evidence: JSON.stringify(evidenceByCriterion),
+        timing,
+        status: "draft",
+        reviewer: reviewer.name
+      });
+      setTimingByCriterion(finalTimingByCriterion);
+      pageStartedAt.current = Date.now();
+      setActiveCall((current) =>
+        current
+          ? {
+              ...current,
+              ratingsHistory: saved ? [saved, ...current.ratingsHistory] : current.ratingsHistory
+            }
+          : current
+      );
+      return true;
+    } catch (error) {
+      setNotice(error instanceof Error ? `Could not save this page: ${error.message}` : "Could not save this page. Stay here and try again.");
+      return false;
+    } finally {
+      setIsSavingPage(false);
+    }
   }
 
   function logout() {
@@ -523,21 +564,21 @@ function App() {
 
             <div className="action-bar">
               {isEditingRatedCall ? (
-                <button className="primary-action full-action" onClick={() => submit("submitted")}>
+                <button className="primary-action full-action" onClick={() => submit("submitted")} disabled={isSavingPage}>
                   Update <Check size={18} />
                 </button>
               ) : (
                 <>
-                  <button className="secondary-action" onClick={() => stepRubric(-1)} disabled={flatIndex === 1}>
+                  <button className="secondary-action" onClick={() => stepRubric(-1)} disabled={flatIndex === 1 || isSavingPage}>
                     <ArrowLeft size={18} /> Back
                   </button>
                   {flatIndex === totalPages ? (
-                    <button className="primary-action" onClick={() => submit("submitted")}>
+                    <button className="primary-action" onClick={() => submit("submitted")} disabled={isSavingPage}>
                       Submit <Check size={18} />
                     </button>
                   ) : (
-                    <button className="primary-action" onClick={() => stepRubric(1)}>
-                      Next <ArrowRight size={18} />
+                    <button className="primary-action" onClick={() => stepRubric(1)} disabled={isSavingPage}>
+                      {isSavingPage ? "Saving..." : "Save and Next"} <ArrowRight size={18} />
                     </button>
                   )}
                 </>
@@ -690,6 +731,16 @@ function parseCriterionEvidence(evidence: string | undefined, rubricItems: Rubri
     return {};
   }
   return {};
+}
+
+function visibleRubricItems(rubricItems: RubricCriterion[]) {
+  return rubricItems.filter((criterion) => !HIDDEN_CRITERION_IDS.has(criterion.id));
+}
+
+function completedVisibleRatingCount(ratings: Record<string, RatingValue>, rubricItems: RubricCriterion[]) {
+  return rubricItems
+    .flatMap((criterion) => criterion.subcriteria)
+    .filter((subcriterion) => ratings[subcriterion.id]).length;
 }
 
 function parseTiming(timing: unknown) {

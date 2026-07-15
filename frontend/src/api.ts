@@ -12,7 +12,7 @@ type RatingPayload = {
   ratings: Record<string, string>;
   evidence: string;
   timing: RatingRecord["timing"];
-  status: "submitted";
+  status: "draft" | "submitted";
   reviewer?: string;
 };
 
