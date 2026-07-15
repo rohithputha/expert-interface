@@ -310,10 +310,11 @@ button:disabled {
 
 .review-column {
   display: grid;
+  grid-column: 2;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
-  border-right: 1px solid var(--color-line-soft);
+  border-left: 1px solid var(--color-line-soft);
   background: var(--color-surface);
 }
 
@@ -394,6 +395,8 @@ audio {
 
 .transcript-panel {
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
@@ -580,12 +583,12 @@ audio {
 
 .timer-pill {
   flex: 0 0 auto;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border: 1px solid #d7cec1;
   border-radius: var(--radius-sm);
   background: #fbfaf7;
   color: var(--color-ink);
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1067,6 +1070,7 @@ input:focus-visible {
 
   .review-column {
     display: contents;
+    border-left: 0;
   }
 
   .player {
@@ -1076,6 +1080,8 @@ input:focus-visible {
   .transcript-panel {
     order: 2;
     display: grid;
+    grid-column: auto;
+    grid-row: auto;
     grid-template-rows: auto minmax(0, auto);
     min-height: 0;
   }
