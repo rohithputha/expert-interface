@@ -45,7 +45,6 @@ function App() {
   const [notice, setNotice] = useState("");
   const [isSavingPage, setIsSavingPage] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
   const pageStartedAt = useRef(Date.now());
 
   useEffect(() => {
@@ -82,8 +81,8 @@ function App() {
     ? (timingByCriterion[activeCriterion.id] ?? 0) + Math.max(0, Date.now() - pageStartedAt.current) + timerTick * 0
     : 0;
   const ungradedCalls = useMemo(
-    () => calls.filter((call) => call.reviewStatus !== "submitted" && !completedIds.has(call.id)),
-    [calls, completedIds]
+    () => calls.filter((call) => call.reviewStatus !== "submitted"),
+    [calls]
   );
   const ratedCalls = useMemo(() => calls.filter((call) => call.reviewStatus === "submitted"), [calls]);
   const myRatedCalls = useMemo(
@@ -216,9 +215,6 @@ function App() {
       complete: true,
       reviewer: reviewer.email
     });
-    const nextCompleted = new Set(completedIds);
-    nextCompleted.add(activeCall.id);
-    setCompletedIds(nextCompleted);
     setCalls((current) =>
       current.map((call) =>
         call.id === activeCall.id
