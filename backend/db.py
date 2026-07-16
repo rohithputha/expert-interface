@@ -247,16 +247,28 @@ class SQLiteRepository(CallRepository):
             row = con.execute(query, params).fetchone()
             if not row:
                 return None
-            rating_rows = con.execute(
-                """
-                select r.*, rv.email as reviewer_email
-                from ratings r
-                left join reviewers rv on rv.id = r.user_id
-                where r.call_id = ? and (? is null or r.user_id = ?)
-                order by coalesce(r.updated_at, r.created_at) desc
-                """,
-                (call_id, user_id, user_id),
-            ).fetchall()
+            if user_id:
+                rating_rows = con.execute(
+                    """
+                    select r.*, rv.email as reviewer_email
+                    from ratings r
+                    left join reviewers rv on rv.id = r.user_id
+                    where r.call_id = ? and r.user_id = ?
+                    order by coalesce(r.updated_at, r.created_at) desc
+                    """,
+                    (call_id, user_id),
+                ).fetchall()
+            else:
+                rating_rows = con.execute(
+                    """
+                    select r.*, rv.email as reviewer_email
+                    from ratings r
+                    left join reviewers rv on rv.id = r.user_id
+                    where r.call_id = ?
+                    order by coalesce(r.updated_at, r.created_at) desc
+                    """,
+                    (call_id,),
+                ).fetchall()
             time_rows = con.execute(
                 "select page_id, time_ms from page_times where call_id = ? and user_id = ?",
                 (call_id, user_id),
@@ -585,16 +597,28 @@ class PostgresRepository(CallRepository):
             row = con.execute(query, params).fetchone()
             if not row:
                 return None
-            rating_rows = con.execute(
-                """
-                select r.*, rv.email as reviewer_email
-                from ratings r
-                left join reviewers rv on rv.id = r.user_id
-                where r.call_id = %s and (%s is null or r.user_id = %s)
-                order by coalesce(r.updated_at, r.created_at) desc
-                """,
-                (call_id, user_id, user_id),
-            ).fetchall()
+            if user_id:
+                rating_rows = con.execute(
+                    """
+                    select r.*, rv.email as reviewer_email
+                    from ratings r
+                    left join reviewers rv on rv.id = r.user_id
+                    where r.call_id = %s and r.user_id = %s
+                    order by coalesce(r.updated_at, r.created_at) desc
+                    """,
+                    (call_id, user_id),
+                ).fetchall()
+            else:
+                rating_rows = con.execute(
+                    """
+                    select r.*, rv.email as reviewer_email
+                    from ratings r
+                    left join reviewers rv on rv.id = r.user_id
+                    where r.call_id = %s
+                    order by coalesce(r.updated_at, r.created_at) desc
+                    """,
+                    (call_id,),
+                ).fetchall()
             time_rows = con.execute(
                 "select page_id, time_ms from page_times where call_id = %s and user_id = %s",
                 (call_id, user_id),
