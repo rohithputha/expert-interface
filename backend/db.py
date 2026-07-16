@@ -321,7 +321,7 @@ def _call_summary(row: sqlite3.Row) -> dict[str, Any]:
         "id": row["id"],
         "expectedRating": row["expected_rating"],
         "reasoning": row["reasoning"],
-        "recordingUrl": row["recording_url"],
+        "recordingUrl": _recording_url(row["id"], row["recording_url"]),
         "summary": summary,
         "reviewStatus": _row_get(row, "review_status") or "unreviewed",
         "reviewedAt": _row_get(row, "reviewed_at"),
@@ -355,7 +355,7 @@ def _pg_call_summary(row: dict[str, Any]) -> dict[str, Any]:
         "id": row["id"],
         "expectedRating": row["expected_rating"],
         "reasoning": row["reasoning"],
-        "recordingUrl": row["recording_url"],
+        "recordingUrl": _recording_url(row["id"], row["recording_url"]),
         "summary": row["summary_json"],
         "reviewStatus": row["review_status"] or "unreviewed",
         "reviewedAt": _iso(row["reviewed_at"]),
@@ -390,6 +390,12 @@ def _iso(value: Any) -> str | None:
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)
+
+
+def _recording_url(call_id: str, stored_url: str) -> str:
+    if os.environ.get("GCS_AUDIO_BUCKET"):
+        return f"/api/calls/{call_id}/audio"
+    return stored_url
 
 
 def _row_get(row: sqlite3.Row, key: str) -> Any:

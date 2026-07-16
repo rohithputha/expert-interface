@@ -119,6 +119,11 @@ function apiPath(path: string) {
   return API_URL ? `${API_URL}${path}` : path;
 }
 
+export function mediaPath(path: string) {
+  if (!path.startsWith("/")) return path;
+  return apiPath(path);
+}
+
 function toSummary(call: CallDetail): CallSummary {
   return {
     id: call.id,

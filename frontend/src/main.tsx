@@ -17,7 +17,7 @@ import {
   X,
   Wrench
 } from "lucide-react";
-import { loginReviewer, loadCall, loadInitialData, saveRating } from "./api";
+import { loginReviewer, loadCall, loadInitialData, mediaPath, saveRating } from "./api";
 import type { CallDetail, CallSummary, RatingValue, RubricCriterion } from "./types";
 import "./styles.css";
 
@@ -458,7 +458,7 @@ function App() {
               <span>{progress}% scored</span>
             </div>
             <div className="audio-row">
-              <audio src={activeCall.recordingUrl} controls preload="metadata" />
+              <audio src={mediaPath(activeCall.recordingUrl)} controls preload="metadata" />
             </div>
           </header>
 
