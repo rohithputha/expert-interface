@@ -8,27 +8,37 @@ const API_URL = configuredApiUrl ?? "";
 const USE_API = Boolean(configuredApiUrl) || import.meta.env.DEV;
 
 type RatingPayload = {
+  user_id: string;
   call_id: string;
   ratings: Record<string, string>;
   evidence: string;
   timing: RatingRecord["timing"];
   status: "draft" | "submitted";
+  complete?: boolean;
   reviewer?: string;
 };
 
 export type LoginPayload = {
-  name: string;
-  passcode: string;
+  email: string;
+  password: string;
 };
 
-export async function loadInitialData(): Promise<{
+export type Reviewer = {
+  id: string;
+  name: string;
+  email: string;
+  displayName?: string;
+};
+
+export async function loadInitialData(reviewerId?: string): Promise<{
   calls: CallSummary[];
   activeCall: CallDetail | null;
   rubric: RubricCriterion[];
 }> {
   if (USE_API) {
+    const reviewerQuery = reviewerId ? `?user_id=${encodeURIComponent(reviewerId)}` : "";
     const [callsResponse, rubricResponse] = await Promise.all([
-      fetch(apiPath("/api/calls")),
+      fetch(apiPath(`/api/calls${reviewerQuery}`)),
       fetch(apiPath("/api/rubric"))
     ]);
     if (!callsResponse.ok) {
@@ -40,7 +50,7 @@ export async function loadInitialData(): Promise<{
     const callsJson = await callsResponse.json();
     const rubricJson = await rubricResponse.json();
     const calls = callsJson.calls as CallSummary[];
-    const activeCall = calls[0] ? await loadCall(calls[0].id) : null;
+    const activeCall = calls[0] ? await loadCall(calls[0].id, reviewerId) : null;
     return { calls, activeCall, rubric: rubricJson.rubric as RubricCriterion[] };
   }
 
@@ -52,9 +62,10 @@ export async function loadInitialData(): Promise<{
   };
 }
 
-export async function loadCall(callId: string): Promise<CallDetail> {
+export async function loadCall(callId: string, reviewerId?: string): Promise<CallDetail> {
   if (USE_API) {
-    const response = await fetch(apiPath(`/api/calls/${callId}`));
+    const reviewerQuery = reviewerId ? `?user_id=${encodeURIComponent(reviewerId)}` : "";
+    const response = await fetch(apiPath(`/api/calls/${callId}${reviewerQuery}`));
     if (!response.ok) {
       throw new Error("Call not found");
     }
@@ -95,13 +106,13 @@ export async function saveRating(payload: RatingPayload): Promise<RatingRecord |
   return json.rating as RatingRecord;
 }
 
-export async function loginReviewer(payload: LoginPayload): Promise<{ name: string }> {
-  const name = payload.name.trim();
-  if (!name) {
-    throw new Error("Enter your name to continue.");
+export async function loginReviewer(payload: LoginPayload): Promise<Reviewer> {
+  const email = payload.email.trim().toLowerCase();
+  if (!email) {
+    throw new Error("Enter your email to continue.");
   }
   if (!USE_API) {
-    return { name };
+    return { id: "local-reviewer", name: email, email };
   }
   const response = await fetch(apiPath("/api/login"), {
     method: "POST",
@@ -112,7 +123,7 @@ export async function loginReviewer(payload: LoginPayload): Promise<{ name: stri
   if (!response.ok) {
     throw new Error(json.error || "Login failed");
   }
-  return json.reviewer as { name: string };
+  return json.reviewer as Reviewer;
 }
 
 function apiPath(path: string) {

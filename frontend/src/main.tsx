@@ -17,13 +17,12 @@ import {
   X,
   Wrench
 } from "lucide-react";
-import { loginReviewer, loadCall, loadInitialData, mediaPath, saveRating } from "./api";
+import { loginReviewer, loadCall, loadInitialData, mediaPath, saveRating, type Reviewer } from "./api";
 import type { CallDetail, CallSummary, RatingValue, RubricCriterion } from "./types";
 import "./styles.css";
 
 type ViewMode = "conversation" | "tools";
 type LoadState = "loading" | "ready" | "empty" | "error";
-type Reviewer = { name: string };
 
 const REVIEWER_KEY = "expert-interface:reviewer";
 const HIDDEN_CRITERION_IDS = new Set(["workflow_adherence"]);
@@ -52,7 +51,7 @@ function App() {
   useEffect(() => {
     if (!reviewer) return;
     setLoadState("loading");
-    loadInitialData()
+    loadInitialData(reviewer.id)
       .then((data) => {
         const visibleRubric = visibleRubricItems(data.rubric);
         setCalls(data.calls);
@@ -88,8 +87,8 @@ function App() {
   );
   const ratedCalls = useMemo(() => calls.filter((call) => call.reviewStatus === "submitted"), [calls]);
   const myRatedCalls = useMemo(
-    () => ratedCalls.filter((call) => !call.reviewedBy || call.reviewedBy === reviewer?.name),
-    [ratedCalls, reviewer?.name]
+    () => ratedCalls.filter((call) => !call.reviewedBy || call.reviewedBy === reviewer?.email),
+    [ratedCalls, reviewer?.email]
   );
   const completedSubcriterionCount = useMemo(
     () =>
@@ -140,7 +139,8 @@ function App() {
   }
 
   async function selectCall(callId: string) {
-    const next = await loadCall(callId);
+    if (!reviewer) return;
+    const next = await loadCall(callId, reviewer.id);
     setActiveCall(next);
     setCriterionIndex(0);
     setSubIndex(0);
@@ -207,12 +207,14 @@ function App() {
     const finalTimingByCriterion = commitCurrentTiming();
     const timing = buildTiming(finalTimingByCriterion);
     const saved = await saveRating({
+      user_id: reviewer.id,
       call_id: activeCall.id,
       ratings,
       evidence: JSON.stringify(evidenceByCriterion),
       timing,
       status,
-      reviewer: reviewer.name
+      complete: true,
+      reviewer: reviewer.email
     });
     const nextCompleted = new Set(completedIds);
     nextCompleted.add(activeCall.id);
@@ -220,7 +222,7 @@ function App() {
     setCalls((current) =>
       current.map((call) =>
         call.id === activeCall.id
-          ? { ...call, reviewStatus: "submitted", reviewedAt: saved?.createdAt ?? new Date().toISOString(), reviewedBy: reviewer.name }
+          ? { ...call, reviewStatus: "submitted", reviewedAt: saved?.createdAt ?? new Date().toISOString(), reviewedBy: reviewer.email }
           : call
       )
     );
@@ -230,7 +232,7 @@ function App() {
             ...current,
             reviewStatus: "submitted",
             reviewedAt: saved?.createdAt ?? new Date().toISOString(),
-            reviewedBy: reviewer.name,
+            reviewedBy: reviewer.email,
             ratingsHistory: saved ? [saved, ...current.ratingsHistory] : current.ratingsHistory
           }
         : current
@@ -286,12 +288,13 @@ function App() {
     setIsSavingPage(true);
     try {
       const saved = await saveRating({
+        user_id: reviewer.id,
         call_id: activeCall.id,
         ratings,
         evidence: JSON.stringify(evidenceByCriterion),
         timing,
         status: "draft",
-        reviewer: reviewer.name
+        reviewer: reviewer.email
       });
       setTimingByCriterion(finalTimingByCriterion);
       pageStartedAt.current = Date.now();
@@ -514,12 +517,14 @@ function App() {
                   </div>
                   <fieldset className="rating-options">
                     <legend className="sr-only">Rating options for {subcriterion.title}</legend>
-                    {subcriterion.options.map((option) => (
-                      <label className="rating-option" key={option.value}>
+                    {subcriterion.options.map((option) => {
+                      const isSelected = ratings[subcriterion.id] === option.value;
+                      return (
+                      <label className={`rating-option ${isSelected ? "is-selected" : ""}`} key={`${subcriterion.id}-${option.value}`}>
                         <input
                           type="radio"
                           name={subcriterion.id}
-                          checked={ratings[subcriterion.id] === option.value}
+                          checked={isSelected}
                           onChange={() => setRatings((current) => ({ ...current, [subcriterion.id]: option.value }))}
                         />
                         <span className="radio-dot" aria-hidden="true" />
@@ -534,7 +539,8 @@ function App() {
                           <small>{option.description}</small>
                         </span>
                       </label>
-                    ))}
+                      );
+                    })}
                   </fieldset>
                 </section>
               ))}
@@ -604,8 +610,8 @@ function App() {
 }
 
 function LoginScreen({ onLogin }: { onLogin: (reviewer: Reviewer) => void }) {
-  const [name, setName] = useState("");
-  const [passcode, setPasscode] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -614,7 +620,7 @@ function LoginScreen({ onLogin }: { onLogin: (reviewer: Reviewer) => void }) {
     setError("");
     setIsSubmitting(true);
     try {
-      const reviewer = await loginReviewer({ name, passcode });
+      const reviewer = await loginReviewer({ email, password });
       onLogin(reviewer);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Login failed");
@@ -634,16 +640,15 @@ function LoginScreen({ onLogin }: { onLogin: (reviewer: Reviewer) => void }) {
           <h1>Sign in</h1>
         </div>
         <label>
-          Name
-          <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" />
+          Email
+          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" />
         </label>
         <label>
-          Passcode
+          Password
           <input
-            value={passcode}
-            onChange={(event) => setPasscode(event.target.value)}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             type="password"
-            inputMode="numeric"
             autoComplete="current-password"
           />
         </label>
@@ -771,7 +776,9 @@ function readStoredReviewer(): Reviewer | null {
     const stored = window.localStorage.getItem(REVIEWER_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored);
-    return parsed?.name ? { name: parsed.name } : null;
+    return parsed?.id && parsed?.email && parsed?.name
+      ? { id: parsed.id, email: parsed.email, name: parsed.name, displayName: parsed.displayName }
+      : null;
   } catch {
     return null;
   }

@@ -35,15 +35,23 @@
 
 html,
 body {
+  height: 100%;
+  width: 100%;
   min-width: 320px;
   margin: 0;
-  overflow-x: clip;
+  overflow: hidden;
   background:
     linear-gradient(180deg, #fbfaf7 0%, var(--color-paper) 34%, #f1eee8 100%);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-weight: 400;
   letter-spacing: 0;
+}
+
+#root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 button,
@@ -64,8 +72,13 @@ button:disabled {
 .app-shell {
   display: grid;
   grid-template-columns: 286px minmax(760px, 1180px);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
   justify-content: center;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   gap: var(--space-4);
   padding: var(--space-4);
 }
@@ -81,11 +94,12 @@ button:disabled {
 }
 
 .queue-panel {
-  align-self: start;
-  position: sticky;
-  top: 18px;
-  max-height: calc(100vh - 36px);
+  align-self: stretch;
+  height: calc(100vh - var(--space-4) * 2);
+  height: calc(100dvh - var(--space-4) * 2);
+  max-height: none;
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--color-line-soft);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -294,9 +308,10 @@ button:disabled {
 .phone-workspace {
   display: grid;
   grid-template-columns: minmax(380px, 0.95fr) minmax(360px, 1.05fr);
-  align-self: start;
+  align-self: stretch;
   height: calc(100vh - var(--space-4) * 2);
-  min-height: 620px;
+  height: calc(100dvh - var(--space-4) * 2);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--color-line-soft);
   border-radius: var(--radius-md);
@@ -516,6 +531,8 @@ audio {
 .rating-card {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--color-surface);
 }
 
@@ -703,6 +720,7 @@ audio {
 }
 
 .rating-option {
+  position: relative;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
   align-items: start;
@@ -713,7 +731,7 @@ audio {
   transition: background 140ms ease;
 }
 
-.rating-option:has(input:checked) {
+.rating-option.is-selected {
   background: var(--color-selection);
   box-shadow: inset 3px 0 0 var(--color-selection-edge);
 }
@@ -722,13 +740,18 @@ audio {
   background: #fbfaf7;
 }
 
-.rating-option:has(input:checked):hover {
+.rating-option.is-selected:hover {
   background: var(--color-selection);
 }
 
 .rating-option input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
+  cursor: pointer;
 }
 
 .radio-dot {
@@ -740,11 +763,11 @@ audio {
   border-radius: 50%;
 }
 
-.rating-option input:checked + .radio-dot {
+.rating-option.is-selected .radio-dot {
   border-color: var(--color-selection-edge);
 }
 
-.rating-option input:checked + .radio-dot::after {
+.rating-option.is-selected .radio-dot::after {
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -999,6 +1022,9 @@ input:focus-visible {
 @media (max-width: 900px) {
   .app-shell {
     display: block;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     padding: 0;
   }
 
@@ -1065,7 +1091,9 @@ input:focus-visible {
   .phone-workspace {
     display: flex;
     min-height: 0;
-    height: auto;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     flex-direction: column;
     border: 0;
     border-radius: 0;
@@ -1084,10 +1112,13 @@ input:focus-visible {
   .transcript-panel {
     order: 2;
     display: grid;
+    flex: 0 0 min(40vh, 330px);
     grid-column: auto;
     grid-row: auto;
-    grid-template-rows: auto minmax(0, auto);
+    grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
+    max-height: min(40vh, 330px);
+    overflow: hidden;
   }
 
   .evidence-view {
@@ -1095,7 +1126,7 @@ input:focus-visible {
   }
 
   .conversation {
-    max-height: min(40vh, 330px);
+    max-height: none;
   }
 
   .tool-list {
@@ -1104,7 +1135,9 @@ input:focus-visible {
 
   .rating-card {
     order: 3;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .mobile-dashboard {

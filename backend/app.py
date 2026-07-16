@@ -15,10 +15,12 @@ CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
 ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ORIGIN.split(",") if origin.strip()]
 GCS_AUDIO_BUCKET = os.environ.get("GCS_AUDIO_BUCKET", "").strip()
 GCS_AUDIO_OBJECT_TEMPLATE = os.environ.get("GCS_AUDIO_OBJECT_TEMPLATE", "{call_id}.redacted.wav")
+HIDDEN_PAGE_IDS = {"workflow_adherence"}
 
 
 class ApiHandler(BaseHTTPRequestHandler):
     repo = get_repository()
+    repo.sync_pages([page for page in RUBRIC if page.get("id") not in HIDDEN_PAGE_IDS])
 
     def do_OPTIONS(self) -> None:
         self._send_empty(204)
@@ -38,7 +40,8 @@ class ApiHandler(BaseHTTPRequestHandler):
 
         if path == "/api/calls":
             status = _first(query.get("status"))
-            self._send_json({"calls": self.repo.list_calls(status=status)})
+            user_id = _first(query.get("user_id"))
+            self._send_json({"calls": self.repo.list_calls(user_id=user_id, status=status)})
             return
 
         audio_match = re.match(r"^/api/calls/([^/]+)/audio$", path)
@@ -48,7 +51,8 @@ class ApiHandler(BaseHTTPRequestHandler):
 
         if path.startswith("/api/calls/"):
             call_id = path.split("/", 3)[-1]
-            call = self.repo.get_call(call_id)
+            user_id = _first(query.get("user_id"))
+            call = self.repo.get_call(call_id, user_id=user_id)
             if not call:
                 self._send_json({"error": "Call not found"}, status=404)
                 return
@@ -61,27 +65,31 @@ class ApiHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path.rstrip("/") == "/api/login":
             payload = self._read_json()
-            name = str(payload.get("name", "")).strip()
-            passcode = str(payload.get("passcode", "")).strip()
-            expected_passcode = os.environ.get("EXPERT_LOGIN_CODE", "").strip()
-            if not name:
-                self._send_json({"error": "Name is required"}, status=400)
+            email = str(payload.get("email") or payload.get("name") or "").strip()
+            password = str(payload.get("password") or payload.get("passcode") or "").strip()
+            if not email:
+                self._send_json({"error": "Email is required"}, status=400)
                 return
-            if expected_passcode and passcode != expected_passcode:
-                self._send_json({"error": "Invalid passcode"}, status=401)
+            reviewer = self.repo.authenticate_reviewer(email, password)
+            if not reviewer:
+                self._send_json({"error": "Invalid email or password"}, status=401)
                 return
-            self._send_json({"reviewer": {"name": name}})
+            self._send_json({"reviewer": reviewer})
             return
 
         if parsed.path.rstrip("/") == "/api/ratings":
             payload = self._read_json()
-            required = {"call_id", "ratings", "evidence"}
+            required = {"user_id", "call_id", "ratings", "evidence"}
             missing = sorted(required - set(payload))
             if missing:
                 self._send_json({"error": "Missing required fields", "fields": missing}, status=400)
                 return
 
-            saved = self.repo.save_rating(payload)
+            try:
+                saved = self.repo.save_rating(payload)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
             self._send_json({"rating": saved}, status=201)
             return
 
