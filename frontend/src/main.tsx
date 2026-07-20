@@ -26,6 +26,7 @@ type LoadState = "loading" | "ready" | "empty" | "error";
 
 const REVIEWER_KEY = "expert-interface:reviewer";
 const HIDDEN_CRITERION_IDS = new Set(["workflow_adherence"]);
+const WORKFLOW_ADHERENCE_REVIEWERS = new Set(["rohith@heyrubric.ai", "pragya@heyrubric.ai"]);
 
 function App() {
   const [reviewer, setReviewer] = useState<Reviewer | null>(() => readStoredReviewer());
@@ -52,7 +53,7 @@ function App() {
     setLoadState("loading");
     loadInitialData(reviewer.id)
       .then((data) => {
-        const visibleRubric = visibleRubricItems(data.rubric);
+        const visibleRubric = visibleRubricItems(data.rubric, reviewer.email);
         setCalls(data.calls);
         setActiveCall(data.activeCall);
         setRubric(visibleRubric);
@@ -590,14 +591,17 @@ function App() {
         </div>
 
         <aside className="transcript-panel" aria-label="Call evidence">
-          <div className="tabs tabs-single" role="tablist">
+          <div className="tabs" role="tablist">
             <button className={mode === "conversation" ? "is-active" : ""} onClick={() => setMode("conversation")}>
               <ClipboardCheck size={17} /> Conversation
+            </button>
+            <button className={mode === "tools" ? "is-active" : ""} onClick={() => setMode("tools")}>
+              <Wrench size={17} /> Tool Calls
             </button>
           </div>
 
           <section className="evidence-view">
-            <Conversation call={activeCall} />
+            {mode === "conversation" ? <Conversation call={activeCall} /> : <ToolCalls call={activeCall} />}
           </section>
         </aside>
       </section>
@@ -731,8 +735,14 @@ function parseCriterionEvidence(evidence: string | undefined, rubricItems: Rubri
   return {};
 }
 
-function visibleRubricItems(rubricItems: RubricCriterion[]) {
-  return rubricItems.filter((criterion) => !HIDDEN_CRITERION_IDS.has(criterion.id));
+function visibleRubricItems(rubricItems: RubricCriterion[], reviewerEmail?: string) {
+  const canViewWorkflow = WORKFLOW_ADHERENCE_REVIEWERS.has((reviewerEmail ?? "").toLowerCase());
+  if (canViewWorkflow) {
+    return rubricItems.filter((criterion) => criterion.id === "workflow_adherence");
+  }
+  return rubricItems.filter((criterion) => {
+    return !HIDDEN_CRITERION_IDS.has(criterion.id);
+  });
 }
 
 function completedVisibleRatingCount(ratings: Record<string, RatingValue>, rubricItems: RubricCriterion[]) {
