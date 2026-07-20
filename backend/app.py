@@ -15,12 +15,11 @@ CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
 ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ORIGIN.split(",") if origin.strip()]
 GCS_AUDIO_BUCKET = os.environ.get("GCS_AUDIO_BUCKET", "").strip()
 GCS_AUDIO_OBJECT_TEMPLATE = os.environ.get("GCS_AUDIO_OBJECT_TEMPLATE", "{call_id}.redacted.wav")
-HIDDEN_PAGE_IDS = {"workflow_adherence"}
 
 
 class ApiHandler(BaseHTTPRequestHandler):
     repo = get_repository()
-    repo.sync_pages([page for page in RUBRIC if page.get("id") not in HIDDEN_PAGE_IDS])
+    repo.sync_pages(RUBRIC)
 
     def do_OPTIONS(self) -> None:
         self._send_empty(204)
