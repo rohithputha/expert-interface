@@ -29,11 +29,12 @@ def main() -> None:
                 continue
 
             transcript = parse_transcript(clean(row.get("readable_transcript")))
+            tool_events = parse_tool_events(clean(row.get("tool_call_transcript")))
             summary = {
                 "index": imported + 1,
                 "turnCount": len(transcript),
-                "toolCount": 0,
-                "toolNames": [],
+                "toolCount": len(tool_events),
+                "toolNames": [event["name"] for event in tool_events[:8]],
                 "durationLabel": duration_label(clean(row.get("duration_seconds"))),
                 "issueTags": issue_tags(clean(row.get("flagged_evals")), clean(row.get("primary_intent_category"))),
                 "language": clean(row.get("language")),
@@ -48,7 +49,7 @@ def main() -> None:
                     "reasoning": clean(row.get("summary")),
                     "recordingUrl": clean(row.get("recording_url")),
                     "transcript": transcript,
-                    "toolEvents": [],
+                    "toolEvents": tool_events,
                     "summary": summary,
                 }
             )
@@ -85,6 +86,84 @@ def parse_transcript(text: str) -> list[dict[str, Any]]:
             }
         )
     return turns
+
+
+def parse_tool_events(text: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        call_match = re.match(r"^→\s*TOOL_CALL\s+([a-zA-Z0-9_]+)\((.*)\)\s*$", stripped)
+        if call_match:
+            if current:
+                events.append(current)
+            name = call_match.group(1)
+            args = safe_json(call_match.group(2))
+            current = {
+                "id": f"tool_{len(events) + 1}",
+                "name": name,
+                "args": trim_payload(args),
+                "result": None,
+                "summary": summarize_tool(name, args, None),
+            }
+            continue
+
+        result_match = re.match(r"^←\s*TOOL_RESULT:\s*(.*)$", stripped)
+        if result_match and current:
+            result = safe_json(result_match.group(1))
+            current["result"] = trim_payload(result)
+            current["summary"] = summarize_tool(current["name"], current["args"], result)
+            events.append(current)
+            current = None
+
+    if current:
+        events.append(current)
+    return events
+
+
+def safe_json(raw: str) -> Any:
+    try:
+        return json.loads(raw)
+    except Exception:
+        return raw[:500]
+
+
+def trim_payload(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        keep = {}
+        for key in (
+            "status",
+            "outcome",
+            "next_action",
+            "rule_violated",
+            "patient_facing",
+            "count",
+            "match_count",
+            "action",
+            "execution_message",
+            "current_visit_type",
+            "new_slot_time",
+            "reasonText",
+            "errorMessage",
+        ):
+            if key in value:
+                keep[key] = value[key]
+        return keep or {"keys": list(value.keys())[:8]}
+    return str(value)[:240]
+
+
+def summarize_tool(name: str, args: Any, result: Any) -> str:
+    if isinstance(result, dict):
+        for key in ("outcome", "status", "next_action", "rule_violated", "match_count"):
+            if result.get(key) is not None:
+                return f"{name}: {key} {result[key]}"
+        if "count" in result:
+            return f"{name}: {result['count']} result(s)"
+    if isinstance(args, dict) and args.get("execution_message"):
+        return f"{name}: {args['execution_message']}"
+    return name
 
 
 def duration_label(value: str) -> str:
